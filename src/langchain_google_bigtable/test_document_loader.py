@@ -16,6 +16,7 @@ import json
 import os
 import random
 import string
+from typing import Iterator
 
 import pytest
 from google.cloud import bigtable
@@ -33,19 +34,19 @@ TABLE_ID_PREFIX = "test-table-"
 
 
 @pytest.fixture
-def client() -> bigtable.Client:
+def client() -> Iterator[bigtable.Client]:
     yield bigtable.Client(
         project=get_env_var("PROJECT_ID", "ID of the GCP project"), admin=True
     )
 
 
 @pytest.fixture
-def instance_id() -> str:
+def instance_id() -> Iterator[str]:
     yield get_env_var("INSTANCE_ID", "ID of the Cloud Bigtable instance")
 
 
 @pytest.fixture
-def table_id(instance_id: str, client: bigtable.Client) -> str:
+def table_id(instance_id: str, client: bigtable.Client) -> Iterator[str]:
     table_id = TABLE_ID_PREFIX + "".join(
         random.choice(string.ascii_lowercase) for _ in range(10)
     )
