@@ -22,3 +22,6 @@ steps:
     name: python:3.11
     entrypoint: python
     args: ["-m", "pytest"]
+    env:
+      - 'PROJECT_ID=$PROJECT_ID'
+      - 'INSTANCE_ID=test-instance'
