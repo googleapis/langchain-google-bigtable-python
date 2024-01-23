@@ -119,6 +119,35 @@ def test_bigtable_custom_content_encoding(
     assert len(returned_docs[0].metadata["rowkey"]) > 0
 
 
+def test_bigtable_invalid_custom_content_encoding(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    content_encoding = Encoding.INT_BIG_ENDIAN
+    with pytest.raises(ValueError) as excinfo:
+        BigtableSaver(
+            instance_id,
+            table_id,
+            content_encoding=content_encoding,
+            client=client,
+        )
+    assert (
+        str(excinfo.value)
+        == f"{content_encoding} not in {(Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)}"
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        BigtableLoader(
+            instance_id,
+            table_id,
+            content_encoding=content_encoding,
+            client=client,
+        )
+    assert (
+        str(excinfo.value)
+        == f"{content_encoding} not in {(Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)}"
+    )
+
+
 def test_bigtable_filter(
     instance_id: str, table_id: str, client: bigtable.Client
 ) -> None:
@@ -252,6 +281,33 @@ def test_bigtable_empty_custom_mapping(
     assert (
         str(excinfo.value)
         == "decoding/encoding function not set for custom encoded metadata key"
+    )
+
+
+def test_bigtable_missing_column_family(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    metadata_mappings = [
+        MetadataMapping(
+            column_family="non_existent_family",
+            column_name="some_column",
+            metadata_key="some_key",
+            encoding=Encoding.INT_BIG_ENDIAN,
+        ),
+    ]
+    with pytest.raises(ValueError) as excinfo:
+        BigtableLoader(
+            instance_id, table_id, client=client, metadata_mappings=metadata_mappings
+        )
+    assert str(excinfo.value).startswith(
+        f"column family '{metadata_mappings[0].column_family}' doesn't exist in table. Existing column families are "
+    )
+    with pytest.raises(ValueError) as excinfo:
+        BigtableSaver(
+            instance_id, table_id, client=client, metadata_mappings=metadata_mappings
+        )
+    assert str(excinfo.value).startswith(
+        f"column family '{metadata_mappings[0].column_family}' doesn't exist in table. Existing column families are "
     )
 
 

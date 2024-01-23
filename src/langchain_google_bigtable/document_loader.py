@@ -101,14 +101,14 @@ class BigtableLoader(BaseLoader):
             .instance(instance_id)
             .table(table_id)
         )
+        if content_encoding not in SUPPORTED_DOC_ENCODING:
+            raise ValueError(f"{content_encoding} not in {SUPPORTED_DOC_ENCODING}")
         families = self.client.list_column_families()
         for mapping in metadata_mappings:
             if mapping.column_family not in families:
                 raise ValueError(
                     f"column family '{mapping.column_family}' doesn't exist in table. Existing column families are {families.keys()}"
                 )
-        if content_encoding not in SUPPORTED_DOC_ENCODING:
-            raise ValueError(f"{content_encoding} not in {SUPPORTED_DOC_ENCODING}")
         self.content_encoding = content_encoding
         self.content_column_family = content_column_family
         self.content_column_name = content_column_name
@@ -203,6 +203,8 @@ class BigtableSaver:
             .instance(instance_id)
             .table(table_id)
         )
+        if content_encoding not in SUPPORTED_DOC_ENCODING:
+            raise ValueError(f"{content_encoding} not in {SUPPORTED_DOC_ENCODING}")
         families = self.client.list_column_families()
         for mapping in metadata_mappings:
             if mapping.column_family not in families:
