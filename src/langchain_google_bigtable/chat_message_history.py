@@ -16,16 +16,13 @@
 from __future__ import annotations
 
 import json
-import time
-import uuid
 import re
-
+import time
 from typing import List, Optional
+import uuid
 
 from google.cloud import bigtable
 from google.cloud.bigtable.row_filters import RowKeyRegexFilter
-
-
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import (
     BaseMessage,

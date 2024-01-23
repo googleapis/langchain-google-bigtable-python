@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-import uuid
-import string
-import random
-import os
 
+import os
+import random
+import string
+import uuid
+
+from google.cloud import bigtable
+from google.cloud.bigtable import column_family
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_google_bigtable import (
     BigtableChatMessageHistory,
 )
-from langchain_core.messages import AIMessage, HumanMessage
-
-from google.cloud import bigtable  # noqa: F401
-from google.cloud.bigtable import column_family
+import pytest
 
 
 TABLE_ID_PREFIX = "test-table-"

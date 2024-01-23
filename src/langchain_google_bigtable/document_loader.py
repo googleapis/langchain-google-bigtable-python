@@ -11,19 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 
-from typing import Iterator, List, Optional, Any, Callable
-import uuid
-from google.cloud import bigtable
 from enum import Enum
 import struct
+from typing import Any, Callable, Iterator, List, Optional
+import uuid
 
-from langchain_core.documents import Document
-
+from google.cloud import bigtable
 from langchain_community.document_loaders.base import BaseLoader
-from langchain_community.utilities.vertexai import get_client_info
+from langchain_core.documents import Document
 
 COLUMN_FAMILY = "langchain"
 CONTENT_COLUMN_NAME = "content"
