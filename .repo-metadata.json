@@ -2,7 +2,6 @@
     "name": "langchain-google-bigtable",
     "name_pretty": "Cloud Bigtable for LangChain - Python",
     "issue_tracker": "https://github.com/googleapis/langchain-google-bigtable-python/issues",
-    "client_documentation": "",
     "release_level": "preview",
     "language": "python",
     "library_type": "OTHER",
