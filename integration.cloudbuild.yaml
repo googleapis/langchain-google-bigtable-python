@@ -24,5 +24,5 @@ steps:
     args: ["-m", "pytest"]
     env:
       - 'PROJECT_ID=$PROJECT_ID'
-      - 'INSTANCT_ID=test-instanct'
+      - 'INSTANCE_ID=test-instanct'
 
