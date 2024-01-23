@@ -84,7 +84,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         row_key = str.encode(
             self.session_id
             + "#"
-            + str(time.time()).rjust(25, "0")
+            + str(time.time_ns()).rjust(25, "0")
             + "#"
             + uuid.uuid4().hex
         )

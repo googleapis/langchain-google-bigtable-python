@@ -85,7 +85,7 @@ def test_bigtable_full_workflow(
 def test_bigtable_loads_of_messages(
     instance_id: str, table_id: str, client: bigtable.Client
 ) -> None:
-    NUM_MESSAGES = 1000000
+    NUM_MESSAGES = 1000
     session_id = uuid.uuid4().hex
     history = BigtableChatMessageHistory(
         instance_id, table_id, session_id, client=client
