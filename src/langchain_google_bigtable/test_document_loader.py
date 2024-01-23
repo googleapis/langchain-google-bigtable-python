@@ -200,6 +200,61 @@ def test_bigtable_metadata_mapping(
     )
 
 
+def test_bigtable_empty_custom_mapping(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    metadata_mappings = [
+        MetadataMapping(
+            column_family="my_custom_family",
+            column_name="my_custom_column",
+            metadata_key="custom_key",
+            encoding=Encoding.CUSTOM,
+            custom_encoding_func=lambda input: str.encode(json.dumps(input)),
+        ),
+    ]
+    saver = BigtableSaver(
+        instance_id, table_id, client=client, metadata_mappings=metadata_mappings
+    )
+    loader = BigtableLoader(
+        instance_id, table_id, client=client, metadata_mappings=metadata_mappings
+    )
+
+    written_docs = [
+        Document(
+            page_content="some content",
+            metadata={"custom_key": {"a": 1, "b": 2}},
+        )
+    ]
+    saver.add_documents(written_docs)
+
+    metadata_mappings = [
+        MetadataMapping(
+            column_family="my_custom_family",
+            column_name="my_custom_column",
+            metadata_key="custom_key",
+            encoding=Encoding.CUSTOM,
+        ),
+    ]
+
+    saver = BigtableSaver(
+        instance_id, table_id, client=client, metadata_mappings=metadata_mappings
+    )
+
+    with pytest.raises(NotImplementedError) as excinfo:
+        saver.add_documents(written_docs)
+    assert (
+        str(excinfo.value)
+        == "decoding/encoding function not set for custom encoded metadata key"
+    )
+
+    with pytest.raises(NotImplementedError) as excinfo:
+        loader.load()
+    assert (
+        str(excinfo.value)
+        == "decoding/encoding function not set for custom encoded metadata key"
+    )
+
+
 def get_env_var(key: str, desc: str) -> str:
     v = os.environ.get(key)
     if v is None:

@@ -41,7 +41,7 @@ class Encoding(Enum):
 
 def _not_implemented(_: Any) -> Any:
     raise NotImplementedError(
-        "decoding function not set for custom encoded metadata key"
+        "decoding/encoding function not set for custom encoded metadata key"
     )
 
 
