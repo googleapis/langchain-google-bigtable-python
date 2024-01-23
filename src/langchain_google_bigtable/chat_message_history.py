@@ -18,17 +18,13 @@ from __future__ import annotations
 import json
 import re
 import time
-from typing import List, Optional
 import uuid
+from typing import List, Optional
 
 from google.cloud import bigtable
 from google.cloud.bigtable.row_filters import RowKeyRegexFilter
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.messages import (
-    BaseMessage,
-    message_to_dict,
-    messages_from_dict,
-)
+from langchain_core.messages import BaseMessage, message_to_dict, messages_from_dict
 
 COLUMN_FAMILY = "langchain"
 COLUMN_NAME = "history"

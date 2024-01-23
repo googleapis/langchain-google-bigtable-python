@@ -13,10 +13,10 @@
 # limitations under the License.
 from __future__ import annotations
 
-from enum import Enum
 import struct
-from typing import Any, Callable, Iterator, List, Optional
 import uuid
+from enum import Enum
+from typing import Any, Callable, Iterator, List, Optional
 
 from google.cloud import bigtable
 from langchain_community.document_loaders.base import BaseLoader
