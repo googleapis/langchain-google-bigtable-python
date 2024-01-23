@@ -86,6 +86,30 @@ def test_bigtable_simple_use_case(
     assert len(returned_docs) == 0
 
 
+def test_bigtable_loads_of_messages(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    NUM_MESSAGES = 1000
+    saver = BigtableSaver(instance_id, table_id, client=client)
+    loader = BigtableLoader(instance_id, table_id, client=client)
+
+    written_docs = [
+        Document(page_content=f"some content {i}") for i in range(NUM_MESSAGES)
+    ]
+    saver.add_documents(written_docs)
+    returned_docs = loader.load()
+
+    assert len(returned_docs) == NUM_MESSAGES
+    for i in range(NUM_MESSAGES):
+        assert returned_docs[i].page_content.startswith("some content")
+        assert returned_docs[i].metadata != {}
+        assert len(returned_docs[i].metadata["rowkey"]) > 0
+
+    saver.delete(returned_docs)
+    returned_docs = loader.load()
+    assert len(returned_docs) == 0
+
+
 def test_bigtable_custom_content_encoding(
     instance_id: str, table_id: str, client: bigtable.Client
 ) -> None:
