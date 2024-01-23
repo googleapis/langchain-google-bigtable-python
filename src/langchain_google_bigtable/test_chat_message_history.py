@@ -105,7 +105,7 @@ def test_bigtable_loads_of_messages(
         content = (
             f"Hey! I am AI! Index: {i}"
             if i % 2 == 0
-            else f"Hey! I am Human! Index: {i}"
+            else f"Hey! I am human! Index: {i}"
         )
         assert isinstance(messages[i], type)
         assert messages[i].content == content
