@@ -82,6 +82,38 @@ def test_bigtable_full_workflow(
     assert len(history.messages) == 0
 
 
+def test_bigtable_loads_of_messages(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    NUM_MESSAGES = 1000000
+    session_id = uuid.uuid4().hex
+    history = BigtableChatMessageHistory(
+        instance_id, table_id, session_id, client=client
+    )
+
+    history.init_schema()
+
+    for i in range(NUM_MESSAGES):
+        history.add_ai_message(f"Hey! I am AI! Index: {2*i}")
+        history.add_user_message(f"Hey! I am human! Index: {2*i+1}")
+
+    messages = history.messages
+
+    assert len(messages) == 2 * NUM_MESSAGES
+    for i in range(2 * NUM_MESSAGES):
+        type = AIMessage if i % 2 == 0 else HumanMessage
+        content = (
+            f"Hey! I am AI! Index: {i}"
+            if i % 2 == 0
+            else f"Hey! I am Human! Index: {i}"
+        )
+        assert isinstance(messages[i], type)
+        assert messages[i].content == content
+
+    history.clear()
+    assert len(history.messages) == 0
+
+
 def test_bigtable_multiple_sessions(
     instance_id: str, table_id: str, client: bigtable.Client
 ) -> None:
