@@ -22,7 +22,7 @@ from google.cloud import bigtable
 from google.cloud.bigtable import column_family, row_filters
 from langchain_core.documents import Document
 
-from langchain_google_bigtable import (
+from langchain_google_bigtable.document_loader import (
     BigtableLoader,
     BigtableSaver,
     Encoding,

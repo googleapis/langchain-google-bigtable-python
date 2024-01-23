@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from langchain_google_bigtable import (
-    BigtableChatMessageHistory,
+from langchain_google_bigtable.document_loader import (
     BigtableLoader,
     BigtableSaver,
 )
+from langchain_google_bigtable.chat_message_history import BigtableChatMessageHistory
 
 __all__ = ["BigtableChatMessageHistory", "BigtableLoader", "BigtableSaver"]

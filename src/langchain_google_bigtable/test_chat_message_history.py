@@ -23,7 +23,7 @@ from google.cloud import bigtable
 from google.cloud.bigtable import column_family
 from langchain_core.messages import AIMessage, HumanMessage
 
-from langchain_google_bigtable import BigtableChatMessageHistory
+from langchain_google_bigtable.chat_message_history import BigtableChatMessageHistory
 
 TABLE_ID_PREFIX = "test-table-"
 
