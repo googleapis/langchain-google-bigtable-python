@@ -82,6 +82,41 @@ def test_bigtable_full_workflow(
     assert len(history.messages) == 0
 
 
+def test_bigtable_multiple_sessions(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    session_id1 = uuid.uuid4().hex
+    history1 = BigtableChatMessageHistory(
+        instance_id, table_id, session_id1, client=client
+    )
+    session_id2 = uuid.uuid4().hex
+    history2 = BigtableChatMessageHistory(
+        instance_id, table_id, session_id2, client=client
+    )
+
+    history1.init_schema()
+
+    history1.add_ai_message("Hey! I am AI!")
+    history2.add_user_message("Hey! I am human!")
+    messages1 = history1.messages
+    messages2 = history2.messages
+
+    assert len(messages1) == 1
+    assert len(messages2) == 1
+    assert isinstance(messages1[0], AIMessage)
+    assert messages1[0].content == "Hey! I am AI!"
+    assert isinstance(messages2[0], HumanMessage)
+    assert messages2[0].content == "Hey! I am human!"
+
+    history1.clear()
+    assert len(history1.messages) == 0
+    assert len(history2.messages) == 1
+
+    history2.clear()
+    assert len(history1.messages) == 0
+    assert len(history2.messages) == 0
+
+
 def get_env_var(key: str, desc: str) -> str:
     v = os.environ.get(key)
     if v is None:
