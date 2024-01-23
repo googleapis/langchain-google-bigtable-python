@@ -16,6 +16,7 @@ import json
 import os
 import random
 import string
+import time
 from typing import Iterator
 
 import pytest
@@ -97,6 +98,10 @@ def test_bigtable_loads_of_messages(
         Document(page_content=f"some content {i}") for i in range(NUM_MESSAGES)
     ]
     saver.add_documents(written_docs)
+
+    # wait for eventual consistency
+    time.sleep(5)
+
     returned_docs = loader.load()
 
     assert len(returned_docs) == NUM_MESSAGES
@@ -106,6 +111,10 @@ def test_bigtable_loads_of_messages(
         assert len(returned_docs[i].metadata["rowkey"]) > 0
 
     saver.delete(returned_docs)
+
+    # wait for eventual consistency
+    time.sleep(5)
+
     returned_docs = loader.load()
     assert len(returned_docs) == 0
 
