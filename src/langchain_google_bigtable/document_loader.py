@@ -254,9 +254,9 @@ class BigtableSaver:
             case Encoding.INT_BIG_ENDIAN:
                 return int.to_bytes(value, byteorder="big")
             case Encoding.DOUBLE:
-                return bytearray(struct.pack("d", value))
+                return struct.pack("d", value)
             case Encoding.FLOAT:
-                return bytearray(struct.pack("f", value))
+                return struct.pack("f", value)
             case Encoding.BOOL:
                 return bool.to_bytes(value)
             case Encoding.CUSTOM:

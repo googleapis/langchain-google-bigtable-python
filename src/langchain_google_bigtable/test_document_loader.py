@@ -90,7 +90,7 @@ def test_bigtable_simple_use_case(
 def test_bigtable_loads_of_messages(
     instance_id: str, table_id: str, client: bigtable.Client
 ) -> None:
-    NUM_MESSAGES = 1000
+    NUM_MESSAGES = 100000
     saver = BigtableSaver(instance_id, table_id, client=client)
     loader = BigtableLoader(instance_id, table_id, client=client)
 
@@ -100,7 +100,7 @@ def test_bigtable_loads_of_messages(
     saver.add_documents(written_docs)
 
     # wait for eventual consistency
-    time.sleep(5)
+    time.sleep(10)
 
     returned_docs = loader.load()
 
@@ -110,11 +110,15 @@ def test_bigtable_loads_of_messages(
         assert returned_docs[i].metadata != {}
         assert len(returned_docs[i].metadata["rowkey"]) > 0
 
-    saver.delete(returned_docs)
+    saver.delete(returned_docs[:-1])
 
     # wait for eventual consistency
-    time.sleep(5)
+    time.sleep(10)
 
+    returned_docs = loader.load()
+    assert len(returned_docs) == 1
+
+    saver.delete(returned_docs)
     returned_docs = loader.load()
     assert len(returned_docs) == 0
 
@@ -156,6 +160,9 @@ def test_bigtable_invalid_custom_content_encoding(
     instance_id: str, table_id: str, client: bigtable.Client
 ) -> None:
     content_encoding = Encoding.INT_BIG_ENDIAN
+    error_message = (
+        f"{content_encoding} not in {(Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)}"
+    )
     with pytest.raises(ValueError) as excinfo:
         BigtableSaver(
             instance_id,
@@ -163,10 +170,7 @@ def test_bigtable_invalid_custom_content_encoding(
             content_encoding=content_encoding,
             client=client,
         )
-    assert (
-        str(excinfo.value)
-        == f"{content_encoding} not in {(Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)}"
-    )
+    assert str(excinfo.value) == error_message
 
     with pytest.raises(ValueError) as excinfo:
         BigtableLoader(
@@ -175,10 +179,7 @@ def test_bigtable_invalid_custom_content_encoding(
             content_encoding=content_encoding,
             client=client,
         )
-    assert (
-        str(excinfo.value)
-        == f"{content_encoding} not in {(Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)}"
-    )
+    assert str(excinfo.value) == error_message
 
 
 def test_bigtable_filter(
@@ -221,9 +222,45 @@ def test_bigtable_metadata_mapping(
     metadata_mappings = [
         MetadataMapping(
             column_family="my_int_family",
-            column_name="my_int_column",
-            metadata_key="key_in_metadata_map",
+            column_name="my_big_int_column",
+            metadata_key="big_endian_int",
             encoding=Encoding.INT_BIG_ENDIAN,
+        ),
+        MetadataMapping(
+            column_family="langchain",
+            column_name="my_float_column",
+            metadata_key="float",
+            encoding=Encoding.FLOAT,
+        ),
+        MetadataMapping(
+            column_family="langchain",
+            column_name="my_double_column",
+            metadata_key="double",
+            encoding=Encoding.DOUBLE,
+        ),
+        MetadataMapping(
+            column_family="langchain",
+            column_name="my_bool_column",
+            metadata_key="bool",
+            encoding=Encoding.BOOL,
+        ),
+        MetadataMapping(
+            column_family="my_int_family",
+            column_name="my_little_int_column",
+            metadata_key="little_endian_int",
+            encoding=Encoding.INT_LITTLE_ENDIAN,
+        ),
+        MetadataMapping(
+            column_family="langchain",
+            column_name="my_utf16_column",
+            metadata_key="utf16",
+            encoding=Encoding.UTF16,
+        ),
+        MetadataMapping(
+            column_family="langchain",
+            column_name="non existent",
+            metadata_key="in dictionary",
+            encoding=Encoding.UTF16,
         ),
         MetadataMapping(
             column_family="my_custom_family",
@@ -244,7 +281,17 @@ def test_bigtable_metadata_mapping(
     written_docs = [
         Document(
             page_content="some content",
-            metadata={"custom_key": {"a": 1, "b": 2}, "key_in_metadata_map": 5},
+            metadata={
+                "custom_key": {"a": 1, "b": 2},
+                "big_endian_int": 5,
+                "float": 3.14,
+                "double": 2.71,
+                "little_endian_int": 9,
+                "utf16": "string encoded as utf16",
+                "bool": True,
+                "rowkey": "SomeKey",
+                "key without mapping": "value",
+            },
         )
     ]
     saver.add_documents(written_docs)
@@ -252,14 +299,17 @@ def test_bigtable_metadata_mapping(
 
     assert len(returned_docs) == 1
     assert returned_docs[0].page_content == "some content"
-    assert (
-        returned_docs[0].metadata["custom_key"]
-        == written_docs[0].metadata["custom_key"]
-    )
-    assert (
-        returned_docs[0].metadata["key_in_metadata_map"]
-        == written_docs[0].metadata["key_in_metadata_map"]
-    )
+
+    # Not meant to be in result set
+    written_docs[0].metadata.pop("key without mapping")
+
+    # Floats are encoded differently, losing precious, causing equality impossible
+    written_float = written_docs[0].metadata.pop("float")
+    returned_float = returned_docs[0].metadata.pop("float")
+    assert abs(written_float - returned_float) <= 0.001
+
+    # Compare the rest of the metadata dictionary
+    assert returned_docs[0].metadata == written_docs[0].metadata
 
 
 def test_bigtable_empty_custom_mapping(
