@@ -15,6 +15,7 @@
 
 import os
 import random
+import re
 import string
 import time
 import uuid
@@ -23,8 +24,7 @@ from typing import Iterator
 
 import pytest
 from google.cloud import bigtable
-from google.cloud.bigtable import column_family
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from langchain_google_bigtable.chat_message_history import BigtableChatMessageHistory
 
@@ -80,6 +80,13 @@ def test_bigtable_full_workflow(
     assert len(history.messages) == 0
 
 
+def get_index_from_message(message: BaseMessage) -> int:
+    match = re.search("^Hey! I am (AI|human)! Index: ([0-9]+)$", str(message.content))
+    if match:
+        return int(match[2])
+    return 0
+
+
 def test_bigtable_loads_of_messages(
     instance_id: str, table_id: str, client: bigtable.Client
 ) -> None:
@@ -108,11 +115,15 @@ def test_bigtable_loads_of_messages(
         p.start()
         proc.append(p)
 
-    time.sleep(5)
+    for p in proc:
+        p.join()
 
     messages = history.messages
 
     assert len(messages) == 2 * NUM_MESSAGES
+
+    messages.sort(key=get_index_from_message)
+
     for i in range(2 * NUM_MESSAGES):
         type = AIMessage if i % 2 == 0 else HumanMessage
         content = (
