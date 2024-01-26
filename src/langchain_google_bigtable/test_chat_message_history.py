@@ -16,7 +16,9 @@
 import os
 import random
 import string
+import time
 import uuid
+from multiprocessing import Process
 from typing import Iterator
 
 import pytest
@@ -81,7 +83,7 @@ def test_bigtable_full_workflow(
 def test_bigtable_loads_of_messages(
     instance_id: str, table_id: str, client: bigtable.Client
 ) -> None:
-    NUM_MESSAGES = 1000
+    NUM_MESSAGES = 10000
     session_id = uuid.uuid4().hex
     history = BigtableChatMessageHistory(
         instance_id, table_id, session_id, client=client
@@ -89,9 +91,24 @@ def test_bigtable_loads_of_messages(
 
     history.init_schema()
 
+    proc = []
     for i in range(NUM_MESSAGES):
-        history.add_ai_message(f"Hey! I am AI! Index: {2*i}")
-        history.add_user_message(f"Hey! I am human! Index: {2*i+1}")
+        p = Process(
+            target=lambda i: history.add_ai_message(f"Hey! I am AI! Index: {2*i}"),
+            args=[i],
+        )
+        p.start()
+        proc.append(p)
+        p = Process(
+            target=lambda i: history.add_user_message(
+                f"Hey! I am human! Index: {2*i+1}"
+            ),
+            args=[i],
+        )
+        p.start()
+        proc.append(p)
+
+    time.sleep(5)
 
     messages = history.messages
 

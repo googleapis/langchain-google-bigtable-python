@@ -24,10 +24,7 @@ from typing import List, Optional
 from google.cloud import bigtable
 from google.cloud.bigtable.row_filters import RowKeyRegexFilter
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.messages import (
-    BaseMessage,
-    messages_from_dict,
-)
+from langchain_core.messages import BaseMessage, messages_from_dict
 
 COLUMN_FAMILY = "langchain"
 COLUMN_NAME = "history"
