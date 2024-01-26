@@ -24,7 +24,10 @@ from typing import List, Optional
 from google.cloud import bigtable
 from google.cloud.bigtable.row_filters import RowKeyRegexFilter
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.messages import BaseMessage, message_to_dict, messages_from_dict
+from langchain_core.messages import (
+    BaseMessage,
+    messages_from_dict,
+)
 
 COLUMN_FAMILY = "langchain"
 COLUMN_NAME = "history"
@@ -66,17 +69,17 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
             json.loads(row.cells[COLUMN_FAMILY][COLUMN_NAME.encode()][0].value.decode())
             for row in rows
         ]
-        messages = messages_from_dict(items)
+        messages = messages_from_dict(
+            [{"type": item["type"], "data": item} for item in items]
+        )
         return messages
 
     def init_schema(self):
         families = self.client.list_column_families()
         if COLUMN_FAMILY not in families:
-            self.client.create(
-                column_families={
-                    COLUMN_FAMILY: bigtable.column_family.MaxVersionsGCRule(1)
-                }
-            )
+            self.client.column_family(
+                COLUMN_FAMILY, gc_rule=bigtable.column_family.MaxVersionsGCRule(1)
+            ).create()
 
     def add_message(self, message: BaseMessage) -> None:
         """Write a message to the table"""
@@ -89,7 +92,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
             + uuid.uuid4().hex
         )
         row = self.client.direct_row(row_key)
-        value = str.encode(json.dumps(message_to_dict(message)))
+        value = str.encode(message.json())
         row.set_cell(COLUMN_FAMILY, COLUMN_NAME, value)
         row.commit()
 

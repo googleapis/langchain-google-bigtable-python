@@ -47,11 +47,7 @@ def table_id(instance_id: str, client: bigtable.Client) -> Iterator[str]:
         random.choice(string.ascii_lowercase) for _ in range(10)
     )
     # Create table
-    client.instance(instance_id).table(table_id).create(
-        column_families={
-            "langchain": column_family.MaxVersionsGCRule(1),
-        }
-    )
+    client.instance(instance_id).table(table_id).create()
 
     yield table_id
 
