@@ -36,14 +36,14 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
     Args:
         instance_id: The Bigtable instance to use for chat message history.
         table_id: The Bigtable table to use for chat message history.
-        session_id: Optional. The existing session ID.
+        session_id: The session ID.
     """
 
     def __init__(
         self,
         instance_id: str,
         table_id: str,
-        session_id: Optional[str] = None,
+        session_id: str,
         client: Optional[bigtable.Client] = None,
     ) -> None:
         self.client = (
@@ -52,7 +52,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
             .table(table_id)
         )
 
-        self.session_id = session_id or uuid.uuid4().hex
+        self.session_id = session_id
 
     @property
     def messages(self) -> List[BaseMessage]:  # type: ignore
