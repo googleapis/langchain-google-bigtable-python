@@ -29,6 +29,8 @@ from langchain_core.messages import BaseMessage, messages_from_dict
 COLUMN_FAMILY = "langchain"
 COLUMN_NAME = "history"
 
+default_client: Optional[bigtable.Client] = None
+
 
 class BigtableChatMessageHistory(BaseChatMessageHistory):
     """Chat message history that stores history in Bigtable.
@@ -48,13 +50,19 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         client: Optional[bigtable.Client] = None,
     ) -> None:
         self.client = (
-            (client or bigtable.Client(admin=True))
+            (client or self.__get_default_client())
             .instance(instance_id)
             .table(table_id)
         )
 
         self.session_id = session_id
         self.__init_schema()
+
+    def __get_default_client(self) -> bigtable.Client:
+        global default_client
+        if default_client is None:
+            default_client = bigtable.Client(admin=True)
+        return default_client
 
     @property
     def messages(self) -> List[BaseMessage]:  # type: ignore
