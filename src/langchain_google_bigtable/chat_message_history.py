@@ -54,7 +54,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         )
 
         self.session_id = session_id
-        self.init_schema()
+        self.__init_schema()
 
     @property
     def messages(self) -> List[BaseMessage]:  # type: ignore
@@ -73,7 +73,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         )
         return messages
 
-    def init_schema(self):
+    def __init_schema(self):
         if not self.client.exists():
             self.client.create()
 

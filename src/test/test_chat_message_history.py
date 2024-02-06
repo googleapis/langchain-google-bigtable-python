@@ -62,7 +62,6 @@ def test_bigtable_full_workflow(
         instance_id, table_id, session_id, client=client
     )
 
-    history.init_schema()
     history.add_ai_message("Hey! I am AI!")
     history.add_user_message("Hey! I am human!")
     messages = history.messages
@@ -92,8 +91,6 @@ def test_bigtable_loads_of_messages(
     history = BigtableChatMessageHistory(
         instance_id, table_id, session_id, client=client
     )
-
-    history.init_schema()
 
     proc = []
     for i in range(NUM_MESSAGES):
@@ -146,8 +143,6 @@ def test_bigtable_multiple_sessions(
     history2 = BigtableChatMessageHistory(
         instance_id, table_id, session_id2, client=client
     )
-
-    history1.init_schema()
 
     history1.add_ai_message("Hey! I am AI!")
     history2.add_user_message("Hey! I am human!")
