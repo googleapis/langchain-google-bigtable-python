@@ -17,7 +17,6 @@ import os
 import random
 import re
 import string
-import time
 import uuid
 from multiprocessing import Process
 from typing import Iterator
