@@ -37,6 +37,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         instance_id: The Bigtable instance to use for chat message history.
         table_id: The Bigtable table to use for chat message history.
         session_id: The session ID.
+        client : Optional. The pre-created client to query bigtable.
     """
 
     def __init__(
@@ -96,4 +97,4 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
     def clear(self) -> None:
         """Clear session memory from DB"""
         row_key_prefix = self.session_id
-        self.client.drop_by_prefix(row_key_prefix, timeout=200)
+        self.client.drop_by_prefix(row_key_prefix)
