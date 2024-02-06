@@ -65,6 +65,8 @@ class MetadataMapping:
 
 SUPPORTED_DOC_ENCODING = (Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)
 
+default_client: Optional[bigtable.Client] = None
+
 
 class BigtableLoader(BaseLoader):
     """Load from the Google Cloud Platform `Bigtable`."""
@@ -97,7 +99,7 @@ class BigtableLoader(BaseLoader):
         self.row_set = row_set
         self.filter = filter
         self.client = (
-            (client or bigtable.Client(admin=True))
+            (client or self.__get_default_client())
             .instance(instance_id)
             .table(table_id)
         )
@@ -113,6 +115,12 @@ class BigtableLoader(BaseLoader):
         self.content_column_family = content_column_family
         self.content_column_name = content_column_name
         self.metadata_mappings = metadata_mappings
+
+    def __get_default_client(self) -> bigtable.Client:
+        global default_client
+        if default_client is None:
+            default_client = bigtable.Client(admin=True)
+        return default_client
 
     def load(self) -> List[Document]:
         return list(self.lazy_load())
