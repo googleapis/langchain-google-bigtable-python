@@ -54,6 +54,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         )
 
         self.session_id = session_id
+        self.init_schema()
 
     @property
     def messages(self) -> List[BaseMessage]:  # type: ignore
@@ -73,6 +74,9 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         return messages
 
     def init_schema(self):
+        if not self.client.exists():
+            self.client.create()
+
         families = self.client.list_column_families()
         if COLUMN_FAMILY not in families:
             self.client.column_family(
