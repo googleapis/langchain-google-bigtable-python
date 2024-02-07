@@ -23,6 +23,8 @@ from google.cloud import bigtable
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
+from .common import get_default_client
+
 COLUMN_FAMILY = "langchain"
 CONTENT_COLUMN_NAME = "content"
 ID_METADATA_KEY = "rowkey"
@@ -40,20 +42,20 @@ class Encoding(Enum):
     CUSTOM = "custom"
 
 
-def _not_implemented(_: Any) -> Any:
-    raise NotImplementedError(
-        "decoding/encoding function not set for custom encoded metadata key"
-    )
-
-
 @dataclass
 class MetadataMapping:
     column_family: str
     column_name: str
     metadata_key: str
     encoding: Encoding
-    custom_encoding_func: Callable[[Any], bytes] = _not_implemented
-    custom_decoding_func: Callable[[bytes], Any] = _not_implemented
+
+    def __not_implemented(_: Any) -> Any:
+        raise NotImplementedError(
+            "decoding/encoding function not set for custom encoded metadata key"
+        )
+
+    custom_encoding_func: Callable[[Any], bytes] = __not_implemented
+    custom_decoding_func: Callable[[bytes], Any] = __not_implemented
 
 
 SUPPORTED_DOC_ENCODING = (Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)
@@ -92,12 +94,12 @@ class BigtableLoader(BaseLoader):
         self.row_set = row_set
         self.filter = filter
         self.client = (
-            (client or self.__get_default_client())
-            .instance(instance_id)
-            .table(table_id)
+            (client or get_default_client()).instance(instance_id).table(table_id)
         )
         if content_encoding not in SUPPORTED_DOC_ENCODING:
-            raise ValueError(f"{content_encoding} not in {SUPPORTED_DOC_ENCODING}")
+            raise ValueError(
+                f"content_encoding '{content_encoding}' not supported for content (must be {SUPPORTED_DOC_ENCODING})"
+            )
         families = self.client.list_column_families()
         for mapping in metadata_mappings:
             if mapping.column_family not in families:
@@ -108,12 +110,6 @@ class BigtableLoader(BaseLoader):
         self.content_column_family = content_column_family
         self.content_column_name = content_column_name
         self.metadata_mappings = metadata_mappings
-
-    def __get_default_client(self) -> bigtable.Client:
-        global default_client
-        if default_client is None:
-            default_client = bigtable.Client(admin=True)
-        return default_client
 
     def load(self) -> List[Document]:
         return list(self.lazy_load())
@@ -200,12 +196,12 @@ class BigtableSaver:
             metadata_mappings: Optional. The array of mappings that maps from Bigtable columns to keys on the metadata dictionary, including the encoding to use when mapping from Bigtable bytes to a python type.
         """
         self.client = (
-            (client or self.__get_default_client())
-            .instance(instance_id)
-            .table(table_id)
+            (client or get_default_client()).instance(instance_id).table(table_id)
         )
         if content_encoding not in SUPPORTED_DOC_ENCODING:
-            raise ValueError(f"{content_encoding} not in {SUPPORTED_DOC_ENCODING}")
+            raise ValueError(
+                f"content_encoding '{content_encoding}' not supported for content (must be {(Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)})"
+            )
         families = self.client.list_column_families()
         for mapping in metadata_mappings:
             if mapping.column_family not in families:
@@ -216,12 +212,6 @@ class BigtableSaver:
         self.content_column_family = content_column_family
         self.content_column_name = content_column_name
         self.metadata_mappings = metadata_mappings
-
-    def __get_default_client(self) -> bigtable.Client:
-        global default_client
-        if default_client is None:
-            default_client = bigtable.Client(admin=True)
-        return default_client
 
     def add_documents(self, docs: List[Document]):
         batcher = self.client.mutations_batcher()
