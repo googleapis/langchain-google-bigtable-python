@@ -42,18 +42,18 @@ class Encoding(Enum):
     CUSTOM = "custom"
 
 
-def __not_implemented(_: Any) -> Any:
-    raise NotImplementedError(
-        "OMG decoding/encoding function not set for custom encoded metadata key"
-    )
-
-
 @dataclass
 class MetadataMapping:
     column_family: str
     column_name: str
     metadata_key: str
     encoding: Encoding
+
+    def __not_implemented(_: Any) -> Any:
+        raise NotImplementedError(
+            "OMG decoding/encoding function not set for custom encoded metadata key"
+        )
+
     custom_encoding_func: Callable[[Any], bytes] = __not_implemented
     custom_decoding_func: Callable[[bytes], Any] = __not_implemented
 
