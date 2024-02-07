@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+from langchain_google_bigtable.chat_message_history import (
+    BigtableChatMessageHistory,
+    create_chat_history_table,
+)
 from langchain_google_bigtable.document_loader import (
     BigtableLoader,
     BigtableSaver,
@@ -19,4 +24,11 @@ from langchain_google_bigtable.document_loader import (
     MetadataMapping,
 )
 
-__all__ = ["BigtableLoader", "BigtableSaver", "MetadataMapping", "Encoding"]
+__all__ = [
+    "BigtableChatMessageHistory",
+    "create_chat_history_table",
+    "BigtableLoader",
+    "BigtableSaver",
+    "MetadataMapping",
+    "Encoding",
+]
