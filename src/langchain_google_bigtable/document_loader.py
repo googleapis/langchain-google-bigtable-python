@@ -23,7 +23,7 @@ from google.cloud import bigtable
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
-from langchain_google_bigtable.common import get_default_client
+from .common import get_default_client
 
 COLUMN_FAMILY = "langchain"
 CONTENT_COLUMN_NAME = "content"

@@ -26,7 +26,7 @@ from google.cloud.bigtable.row_filters import RowKeyRegexFilter
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict
 
-from langchain_google_bigtable.common import get_default_client
+from .common import get_default_client
 
 COLUMN_FAMILY = "langchain"
 COLUMN_NAME = "history"
