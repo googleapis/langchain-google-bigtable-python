@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import struct
 import uuid
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Iterator, List, Optional
 
@@ -45,22 +46,14 @@ def _not_implemented(_: Any) -> Any:
     )
 
 
+@dataclass
 class MetadataMapping:
-    def __init__(
-        self,
-        column_family: str,
-        column_name: str,
-        metadata_key: str,
-        encoding: Encoding,
-        custom_encoding_func: Callable[[Any], bytes] = _not_implemented,
-        custom_decoding_func: Callable[[bytes], Any] = _not_implemented,
-    ):
-        self.column_family = column_family
-        self.column_name = column_name
-        self.metadata_key = metadata_key
-        self.encoding = encoding
-        self.custom_encoding_func = custom_encoding_func
-        self.custom_decoding_func = custom_decoding_func
+    column_family: str
+    column_name: str
+    metadata_key: str
+    encoding: Encoding
+    custom_encoding_func: Callable[[Any], bytes] = _not_implemented
+    custom_decoding_func: Callable[[bytes], Any] = _not_implemented
 
 
 SUPPORTED_DOC_ENCODING = (Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)
@@ -207,7 +200,7 @@ class BigtableSaver:
             metadata_mappings: Optional. The array of mappings that maps from Bigtable columns to keys on the metadata dictionary, including the encoding to use when mapping from Bigtable bytes to a python type.
         """
         self.client = (
-            (client or bigtable.Client(admin=True))
+            (client or self.__get_default_client())
             .instance(instance_id)
             .table(table_id)
         )
@@ -223,6 +216,12 @@ class BigtableSaver:
         self.content_column_family = content_column_family
         self.content_column_name = content_column_name
         self.metadata_mappings = metadata_mappings
+
+    def __get_default_client(self) -> bigtable.Client:
+        global default_client
+        if default_client is None:
+            default_client = bigtable.Client(admin=True)
+        return default_client
 
     def add_documents(self, docs: List[Document]):
         batcher = self.client.mutations_batcher()
