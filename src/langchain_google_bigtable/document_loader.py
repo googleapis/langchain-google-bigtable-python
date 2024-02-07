@@ -51,7 +51,7 @@ class MetadataMapping:
 
     def __not_implemented(_: Any) -> Any:
         raise NotImplementedError(
-            "OMG decoding/encoding function not set for custom encoded metadata key"
+            "decoding/encoding function not set for custom encoded metadata key"
         )
 
     custom_encoding_func: Callable[[Any], bytes] = __not_implemented
