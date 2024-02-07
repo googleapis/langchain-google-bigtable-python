@@ -162,14 +162,14 @@ def test_bigtable_invalid_custom_content_encoding(
     content_encoding = Encoding.INT_BIG_ENDIAN
     error_message = f"content_encoding '{content_encoding}' not supported for content (must be {(Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)})"
 
-    # with pytest.raises(ValueError) as excinfo:
-    BigtableSaver(
-        instance_id,
-        table_id,
-        content_encoding=content_encoding,
-        client=client,
-    )
-    # assert str(excinfo.value) == error_message
+    with pytest.raises(ValueError) as excinfo:
+        BigtableSaver(
+            instance_id,
+            table_id,
+            content_encoding=content_encoding,
+            client=client,
+        )
+    assert str(excinfo.value) == error_message
 
     with pytest.raises(ValueError) as excinfo:
         BigtableLoader(
