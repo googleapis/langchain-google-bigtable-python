@@ -15,7 +15,7 @@
 
 from langchain_google_bigtable.chat_message_history import (
     BigtableChatMessageHistory,
-    init_schema,
+    create_chat_history_table,
 )
 from langchain_google_bigtable.document_loader import (
     BigtableLoader,
@@ -26,7 +26,7 @@ from langchain_google_bigtable.document_loader import (
 
 __all__ = [
     "BigtableChatMessageHistory",
-    "init_schema",
+    "create_chat_history_table",
     "BigtableLoader",
     "BigtableSaver",
     "MetadataMapping",
