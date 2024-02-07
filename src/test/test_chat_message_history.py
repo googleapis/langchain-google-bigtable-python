@@ -25,7 +25,10 @@ import pytest
 from google.cloud import bigtable
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
-from langchain_google_bigtable.chat_message_history import BigtableChatMessageHistory
+from langchain_google_bigtable.chat_message_history import (
+    BigtableChatMessageHistory,
+    init_schema,
+)
 
 TABLE_ID_PREFIX = "test-table-"
 
@@ -47,6 +50,8 @@ def table_id(instance_id: str, client: bigtable.Client) -> Iterator[str]:
     table_id = TABLE_ID_PREFIX + "".join(
         random.choice(string.ascii_lowercase) for _ in range(10)
     )
+    # Create table and schema
+    init_schema(instance_id=instance_id, table_id=table_id, client=client)
 
     yield table_id
 
@@ -163,6 +168,48 @@ def test_bigtable_multiple_sessions(
     history2.clear()
     assert len(history1.messages) == 0
     assert len(history2.messages) == 0
+
+
+def test_bigtable_missing_instance(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    non_existent_instance_id = "non-existent"
+    with pytest.raises(NameError) as excinfo:
+        BigtableChatMessageHistory(
+            non_existent_instance_id, table_id, "", client=client
+        )
+
+    assert str(excinfo.value) == f"Instance {non_existent_instance_id} does not exist"
+
+
+def test_bigtable_missing_table(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    non_existent_table_id = "non_existent"
+    with pytest.raises(NameError) as excinfo:
+        BigtableChatMessageHistory(
+            instance_id, non_existent_table_id, "", client=client
+        )
+    assert (
+        str(excinfo.value)
+        == f"Table {non_existent_table_id} does not exist on instance {instance_id}"
+    )
+
+
+def test_bigtable_missing_column_family(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    other_table_id = table_id + "1"
+    client.instance(instance_id).table(other_table_id).create()
+
+    with pytest.raises(NameError) as excinfo:
+        BigtableChatMessageHistory(instance_id, other_table_id, "", client=client)
+    assert (
+        str(excinfo.value)
+        == f"Column family langchain does not exist on table {other_table_id}"
+    )
+
+    client.instance(instance_id).table(other_table_id).delete()
 
 
 def get_env_var(key: str, desc: str) -> str:
