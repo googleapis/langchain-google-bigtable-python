@@ -151,7 +151,7 @@ class BigtableLoader(BaseLoader):
                 and self.metadata_as_json_column_name is not None
                 and self.metadata_as_json_column_family in row.cells
                 and self.metadata_as_json_column_name.encode()
-                in row.cells[mapping.column_family]
+                in row.cells[self.metadata_as_json_column_family]
             ):
                 metadata.update(
                     json.loads(
@@ -265,6 +265,7 @@ class BigtableSaver:
                 doc.page_content.encode(self.content_encoding.value),
             )
             unmapped_metadata = dict(doc.metadata)
+            unmapped_metadata.pop(ID_METADATA_KEY, None)
             for mapping in self.metadata_mappings:
                 if mapping.metadata_key in doc.metadata:
                     value = self._encode(doc.metadata[mapping.metadata_key], mapping)
