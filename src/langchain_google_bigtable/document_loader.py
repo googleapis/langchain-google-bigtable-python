@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import json
 import struct
 import uuid
 from dataclasses import dataclass
@@ -58,7 +59,7 @@ class MetadataMapping:
     custom_decoding_func: Callable[[bytes], Any] = __not_implemented
 
 
-SUPPORTED_DOC_ENCODING = (Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)
+SUPPORTED_TEXT_ENCODING = (Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)
 
 default_client: Optional[bigtable.Client] = None
 
@@ -77,6 +78,9 @@ class BigtableLoader(BaseLoader):
         content_column_family: str = COLUMN_FAMILY,
         content_column_name: str = CONTENT_COLUMN_NAME,
         metadata_mappings: List[MetadataMapping] = [],
+        metadata_as_json_column_family: Optional[str] = None,
+        metadata_as_json_column_name: Optional[str] = None,
+        metadata_as_json_encoding: Encoding = Encoding.UTF8,
     ):
         """Initialize Bigtable document loader.
 
@@ -86,19 +90,26 @@ class BigtableLoader(BaseLoader):
             row_set: Optional. The row set to read data from.
             filter: Optional. The filter to apply to the query to load data from bigtable.
             client : Optional. The pre-created client to query bigtable.
-            content_encoding: Optional. The encoding in which to load the page content. Defaults to UTF-8. Allowed values are  UTF8, UTF16 and ASCII.
+            content_encoding: Optional. The encoding in which to load the page content. Defaults to UTF-8. Allowed values are UTF8, UTF16 and ASCII.
             content_column_family: Optional. The column family in which the content is stored. Defaults to "langchain".
             content_column_name: Optional. The column in which the content is stored. Defaults to "content".
             metadata_mappings: Optional. The array of mappings that maps from Bigtable columns to keys on the metadata dictionary, including the encoding to use when mapping from Bigtable bytes to a python type.
+            metadata_as_json_column_family: Optional. If specified, along with metadata_as_json_column_name, allows loading unmapped metadata properties from Bigtable as json string, from the specified column family.
+            metadata_as_json_column_name: Optional. If specified, along with metadata_as_json_column_family, allows loading unmapped metadata properties from Bigtable as json string, from the specified column name.
+            metadata_as_json_encoding: Optional. The encoding in which to load the metadata as json. Defaults to UTF-8. Allowed values are UTF8, UTF16 and ASCII.
         """
         self.row_set = row_set
         self.filter = filter
         self.client = (
             (client or get_default_client()).instance(instance_id).table(table_id)
         )
-        if content_encoding not in SUPPORTED_DOC_ENCODING:
+        if content_encoding not in SUPPORTED_TEXT_ENCODING:
             raise ValueError(
-                f"content_encoding '{content_encoding}' not supported for content (must be {SUPPORTED_DOC_ENCODING})"
+                f"content_encoding '{content_encoding}' not supported for content (must be {SUPPORTED_TEXT_ENCODING})"
+            )
+        if metadata_as_json_encoding not in SUPPORTED_TEXT_ENCODING:
+            raise ValueError(
+                f"metadata_as_json_encoding '{metadata_as_json_encoding}' not supported for content (must be {SUPPORTED_TEXT_ENCODING})"
             )
         families = self.client.list_column_families()
         for mapping in metadata_mappings:
@@ -110,6 +121,9 @@ class BigtableLoader(BaseLoader):
         self.content_column_family = content_column_family
         self.content_column_name = content_column_name
         self.metadata_mappings = metadata_mappings
+        self.metadata_as_json_column_family = metadata_as_json_column_family
+        self.metadata_as_json_column_name = metadata_as_json_column_name
+        self.metadata_as_json_encoding = metadata_as_json_encoding
 
     def load(self) -> List[Document]:
         return list(self.lazy_load())
@@ -132,6 +146,20 @@ class BigtableLoader(BaseLoader):
                         ].value,
                         mapping,
                     )
+            if (
+                self.metadata_as_json_column_family is not None
+                and self.metadata_as_json_column_name is not None
+                and self.metadata_as_json_column_family in row.cells
+                and self.metadata_as_json_column_name.encode()
+                in row.cells[mapping.column_family]
+            ):
+                metadata.update(
+                    json.loads(
+                        row.cells[self.metadata_as_json_column_family][
+                            self.metadata_as_json_column_name.encode()
+                        ][0].value.decode(self.metadata_as_json_encoding.value)
+                    )
+                )
 
             content = ""
             if (
@@ -183,6 +211,9 @@ class BigtableSaver:
         content_column_family: str = COLUMN_FAMILY,
         content_column_name: str = CONTENT_COLUMN_NAME,
         metadata_mappings: List[MetadataMapping] = [],
+        metadata_as_json_column_family: Optional[str] = None,
+        metadata_as_json_column_name: Optional[str] = None,
+        metadata_as_json_encoding: Encoding = Encoding.UTF8,
     ):
         """Initialize Bigtable document saver.
 
@@ -190,17 +221,24 @@ class BigtableSaver:
             instance: The Bigtable instance to load data from.
             table: The Bigtable table to load data from.
             client : Optional. The pre-created client to query bigtable.
-            content_encoding: Optional. The encoding in which to load the page content. Defaults to UTF-8. Allowed values are  UTF8, UTF16 and ASCII.
+            content_encoding: Optional. The encoding in which to write the page content. Defaults to UTF-8. Allowed values are UTF8, UTF16 and ASCII.
             content_column_family: Optional. The column family in which the content is stored. Defaults to "langchain".
             content_column_name: Optional. The column in which the content is stored. Defaults to "content".
             metadata_mappings: Optional. The array of mappings that maps from Bigtable columns to keys on the metadata dictionary, including the encoding to use when mapping from Bigtable bytes to a python type.
+            metadata_as_json_column_family: Optional. If specified, along with metadata_as_json_column_name, allows saving unmapped metadata properties to Bigtable as json string, into the specified column family.
+            metadata_as_json_column_name: Optional. If specified, along with metadata_as_json_column_family, allows saving unmapped metadata properties to Bigtable as json string, into the specified column name.
+            metadata_as_json_encoding: Optional. The encoding in which to write the metadata as json. Defaults to UTF-8. Allowed values are UTF8, UTF16 and ASCII.
         """
         self.client = (
             (client or get_default_client()).instance(instance_id).table(table_id)
         )
-        if content_encoding not in SUPPORTED_DOC_ENCODING:
+        if content_encoding not in SUPPORTED_TEXT_ENCODING:
             raise ValueError(
-                f"content_encoding '{content_encoding}' not supported for content (must be {(Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)})"
+                f"content_encoding '{content_encoding}' not supported for content (must be {SUPPORTED_TEXT_ENCODING})"
+            )
+        if metadata_as_json_encoding not in SUPPORTED_TEXT_ENCODING:
+            raise ValueError(
+                f"metadata_as_json_encoding '{metadata_as_json_encoding}' not supported for content (must be {SUPPORTED_TEXT_ENCODING})"
             )
         families = self.client.list_column_families()
         for mapping in metadata_mappings:
@@ -212,6 +250,9 @@ class BigtableSaver:
         self.content_column_family = content_column_family
         self.content_column_name = content_column_name
         self.metadata_mappings = metadata_mappings
+        self.metadata_as_json_column_family = metadata_as_json_column_family
+        self.metadata_as_json_column_name = metadata_as_json_column_name
+        self.metadata_as_json_encoding = metadata_as_json_encoding
 
     def add_documents(self, docs: List[Document]):
         batcher = self.client.mutations_batcher()
@@ -223,10 +264,24 @@ class BigtableSaver:
                 self.content_column_name,
                 doc.page_content.encode(self.content_encoding.value),
             )
+            unmapped_metadata = dict(doc.metadata)
             for mapping in self.metadata_mappings:
                 if mapping.metadata_key in doc.metadata:
                     value = self._encode(doc.metadata[mapping.metadata_key], mapping)
                     row.set_cell(mapping.column_family, mapping.column_name, value)
+                    unmapped_metadata.pop(mapping.metadata_key)
+            if (
+                self.metadata_as_json_column_family is not None
+                and self.metadata_as_json_column_name is not None
+            ):
+                row.set_cell(
+                    self.metadata_as_json_column_family,
+                    self.metadata_as_json_column_name,
+                    json.dumps(unmapped_metadata).encode(
+                        self.metadata_as_json_encoding.value
+                    ),
+                )
+
             batcher.mutate(row)
         batcher.flush()
 
