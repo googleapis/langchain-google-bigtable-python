@@ -160,10 +160,8 @@ class BigtableLoader(BaseLoader):
         rows = self.client.read_rows(row_set=self.row_set, filter_=self.filter)
         for row in rows:
             metadata = {ID_METADATA_KEY: row.row_key.decode()}
-            col_family, col_name = (
-                self.metadata_as_json_column_family,
-                self.metadata_as_json_column_name,
-            )
+            col_family = self.metadata_as_json_column_family
+            col_name = self.metadata_as_json_column_name
             if (
                 col_family is not None
                 and col_name is not None
