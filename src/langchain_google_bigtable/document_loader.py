@@ -111,6 +111,20 @@ class BigtableLoader(BaseLoader):
             raise ValueError(
                 f"metadata_as_json_encoding '{metadata_as_json_encoding}' not supported for content (must be {SUPPORTED_TEXT_ENCODING})"
             )
+        if (
+            metadata_as_json_column_family is not None
+            and metadata_as_json_column_name is None
+        ):
+            raise ValueError(
+                f"when metadata_as_json_column_family is set, metadata_as_json_column_name must also be set"
+            )
+        if (
+            metadata_as_json_column_name is not None
+            and metadata_as_json_column_family is None
+        ):
+            raise ValueError(
+                f"when metadata_as_json_column_name is set, metadata_as_json_column_family must also be set"
+            )
         families = self.client.list_column_families()
         for mapping in metadata_mappings:
             if mapping.column_family not in families:
@@ -119,9 +133,20 @@ class BigtableLoader(BaseLoader):
                 )
         self.content_encoding = content_encoding
         self.content_column_family = content_column_family
+        if content_column_family not in families:
+            raise ValueError(
+                f"column family '{content_column_family}' doesn't exist in table. Existing column families are {families.keys()}"
+            )
         self.content_column_name = content_column_name
         self.metadata_mappings = metadata_mappings
         self.metadata_as_json_column_family = metadata_as_json_column_family
+        if (
+            metadata_as_json_column_family is not None
+            and metadata_as_json_column_family not in families
+        ):
+            raise ValueError(
+                f"column family '{metadata_as_json_column_family}' doesn't exist in table. Existing column families are {families.keys()}"
+            )
         self.metadata_as_json_column_name = metadata_as_json_column_name
         self.metadata_as_json_encoding = metadata_as_json_encoding
 
@@ -135,6 +160,22 @@ class BigtableLoader(BaseLoader):
         rows = self.client.read_rows(row_set=self.row_set, filter_=self.filter)
         for row in rows:
             metadata = {ID_METADATA_KEY: row.row_key.decode()}
+            col_family, col_name = (
+                self.metadata_as_json_column_family,
+                self.metadata_as_json_column_name,
+            )
+            if (
+                col_family is not None
+                and col_name is not None
+                and col_family in row.cells
+                and col_name.encode() in row.cells[col_family]
+            ):
+                cell_value = row.cells[col_family][col_name.encode()][0].value
+                metadata_dict = json.loads(
+                    cell_value.decode(self.metadata_as_json_encoding.value)
+                )
+                metadata.update(metadata_dict)
+
             for mapping in self.metadata_mappings:
                 if (
                     mapping.column_family in row.cells
@@ -146,20 +187,6 @@ class BigtableLoader(BaseLoader):
                         ].value,
                         mapping,
                     )
-            if (
-                self.metadata_as_json_column_family is not None
-                and self.metadata_as_json_column_name is not None
-                and self.metadata_as_json_column_family in row.cells
-                and self.metadata_as_json_column_name.encode()
-                in row.cells[self.metadata_as_json_column_family]
-            ):
-                metadata.update(
-                    json.loads(
-                        row.cells[self.metadata_as_json_column_family][
-                            self.metadata_as_json_column_name.encode()
-                        ][0].value.decode(self.metadata_as_json_encoding.value)
-                    )
-                )
 
             content = ""
             if (
@@ -240,6 +267,20 @@ class BigtableSaver:
             raise ValueError(
                 f"metadata_as_json_encoding '{metadata_as_json_encoding}' not supported for content (must be {SUPPORTED_TEXT_ENCODING})"
             )
+        if (
+            metadata_as_json_column_family is not None
+            and metadata_as_json_column_name is None
+        ):
+            raise ValueError(
+                f"when metadata_as_json_column_family is set, metadata_as_json_column_name must also be set"
+            )
+        if (
+            metadata_as_json_column_name is not None
+            and metadata_as_json_column_family is None
+        ):
+            raise ValueError(
+                f"when metadata_as_json_column_name is set, metadata_as_json_column_family must also be set"
+            )
         families = self.client.list_column_families()
         for mapping in metadata_mappings:
             if mapping.column_family not in families:
@@ -248,9 +289,20 @@ class BigtableSaver:
                 )
         self.content_encoding = content_encoding
         self.content_column_family = content_column_family
+        if content_column_family not in families:
+            raise ValueError(
+                f"column family '{content_column_family}' doesn't exist in table. Existing column families are {families.keys()}"
+            )
         self.content_column_name = content_column_name
         self.metadata_mappings = metadata_mappings
         self.metadata_as_json_column_family = metadata_as_json_column_family
+        if (
+            metadata_as_json_column_family is not None
+            and metadata_as_json_column_family not in families
+        ):
+            raise ValueError(
+                f"column family '{metadata_as_json_column_family}' doesn't exist in table. Existing column families are {families.keys()}"
+            )
         self.metadata_as_json_column_name = metadata_as_json_column_name
         self.metadata_as_json_encoding = metadata_as_json_encoding
 
