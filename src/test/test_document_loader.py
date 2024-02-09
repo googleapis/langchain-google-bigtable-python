@@ -267,7 +267,7 @@ def test_bigtable_metadata_mapping(
             metadata_key="custom_key",
             encoding=Encoding.CUSTOM,
             custom_decoding_func=lambda input: json.loads(input.decode()),
-            custom_encoding_func=lambda input: str.encode(json.dumps(input)),
+            custom_encoding_func=lambda input: json.dumps(input).encode(),
         ),
     ]
     saver = BigtableSaver(
@@ -369,9 +369,12 @@ def test_bigtable_empty_custom_mapping(
 def test_bigtable_missing_column_family(
     instance_id: str, table_id: str, client: bigtable.Client
 ) -> None:
+    non_existent_family = "non_existent_family"
+    error_prefix = f"column family '{non_existent_family}' doesn't exist in table. Existing column families are "
+    # Metadata mapping content family
     metadata_mappings = [
         MetadataMapping(
-            column_family="non_existent_family",
+            column_family=non_existent_family,
             column_name="some_column",
             metadata_key="some_key",
             encoding=Encoding.INT_BIG_ENDIAN,
@@ -381,16 +384,286 @@ def test_bigtable_missing_column_family(
         BigtableLoader(
             instance_id, table_id, client=client, metadata_mappings=metadata_mappings
         )
-    assert str(excinfo.value).startswith(
-        f"column family '{metadata_mappings[0].column_family}' doesn't exist in table. Existing column families are "
-    )
+    assert str(excinfo.value).startswith(error_prefix)
     with pytest.raises(ValueError) as excinfo:
         BigtableSaver(
             instance_id, table_id, client=client, metadata_mappings=metadata_mappings
         )
-    assert str(excinfo.value).startswith(
-        f"column family '{metadata_mappings[0].column_family}' doesn't exist in table. Existing column families are "
+    assert str(excinfo.value).startswith(error_prefix)
+
+    # Content column family
+    with pytest.raises(ValueError) as excinfo:
+        BigtableLoader(
+            instance_id,
+            table_id,
+            client=client,
+            content_column_family="non_existent_family",
+        )
+    assert str(excinfo.value).startswith(error_prefix)
+    with pytest.raises(ValueError) as excinfo:
+        BigtableSaver(
+            instance_id,
+            table_id,
+            client=client,
+            content_column_family="non_existent_family",
+        )
+    assert str(excinfo.value).startswith(error_prefix)
+
+    # Metadata as JSON column family
+    with pytest.raises(ValueError) as excinfo:
+        BigtableLoader(
+            instance_id,
+            table_id,
+            client=client,
+            metadata_as_json_column_family="non_existent_family",
+            metadata_as_json_column_name="not_None",
+        )
+    assert str(excinfo.value).startswith(error_prefix)
+    with pytest.raises(ValueError) as excinfo:
+        BigtableSaver(
+            instance_id,
+            table_id,
+            client=client,
+            metadata_as_json_column_family="non_existent_family",
+            metadata_as_json_column_name="not_None",
+        )
+    assert str(excinfo.value).startswith(error_prefix)
+
+
+def test_bigtable_metadata_as_json_invalid_encoding(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    content_encoding = Encoding.INT_BIG_ENDIAN
+    error_message = f"metadata_as_json_encoding '{content_encoding}' not supported for content (must be {(Encoding.UTF8, Encoding.UTF16, Encoding.ASCII)})"
+
+    with pytest.raises(ValueError) as excinfo:
+        BigtableSaver(
+            instance_id,
+            table_id,
+            metadata_as_json_encoding=content_encoding,
+            client=client,
+        )
+    assert str(excinfo.value) == error_message
+
+    with pytest.raises(ValueError) as excinfo:
+        BigtableLoader(
+            instance_id,
+            table_id,
+            metadata_as_json_encoding=content_encoding,
+            client=client,
+        )
+    assert str(excinfo.value) == error_message
+
+
+def test_bigtable_metadata_as_json_only_one_parameter_provided(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    error_message = "when metadata_as_json_column_family is set, metadata_as_json_column_name must also be set"
+
+    with pytest.raises(ValueError) as excinfo:
+        BigtableSaver(
+            instance_id,
+            table_id,
+            client=client,
+            metadata_as_json_column_family="not_None",
+        )
+    assert str(excinfo.value) == error_message
+
+    with pytest.raises(ValueError) as excinfo:
+        BigtableLoader(
+            instance_id,
+            table_id,
+            client=client,
+            metadata_as_json_column_family="not_None",
+        )
+    assert str(excinfo.value) == error_message
+
+    error_message = "when metadata_as_json_column_name is set, metadata_as_json_column_family must also be set"
+    with pytest.raises(ValueError) as excinfo:
+        BigtableSaver(
+            instance_id,
+            table_id,
+            client=client,
+            metadata_as_json_column_name="not_None",
+        )
+    assert str(excinfo.value) == error_message
+
+    with pytest.raises(ValueError) as excinfo:
+        BigtableLoader(
+            instance_id,
+            table_id,
+            client=client,
+            metadata_as_json_column_name="not_None",
+        )
+    assert str(excinfo.value) == error_message
+
+
+def test_bigtable_metadata_as_json(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    metadata_mappings = [
+        MetadataMapping(
+            column_family="my_int_family",
+            column_name="my_big_int_column",
+            metadata_key="big_endian_int",
+            encoding=Encoding.INT_BIG_ENDIAN,
+        ),
+        MetadataMapping(
+            column_family="langchain",
+            column_name="my_float_column",
+            metadata_key="float",
+            encoding=Encoding.FLOAT,
+        ),
+        MetadataMapping(
+            column_family="langchain",
+            column_name="my_double_column",
+            metadata_key="double",
+            encoding=Encoding.DOUBLE,
+        ),
+        MetadataMapping(
+            column_family="langchain",
+            column_name="my_bool_column",
+            metadata_key="bool",
+            encoding=Encoding.BOOL,
+        ),
+        MetadataMapping(
+            column_family="my_int_family",
+            column_name="my_little_int_column",
+            metadata_key="little_endian_int",
+            encoding=Encoding.INT_LITTLE_ENDIAN,
+        ),
+        MetadataMapping(
+            column_family="langchain",
+            column_name="my_utf16_column",
+            metadata_key="utf16",
+            encoding=Encoding.UTF16,
+        ),
+        MetadataMapping(
+            column_family="langchain",
+            column_name="non existent",
+            metadata_key="in dictionary",
+            encoding=Encoding.UTF16,
+        ),
+        MetadataMapping(
+            column_family="my_custom_family",
+            column_name="my_custom_column",
+            metadata_key="custom_key",
+            encoding=Encoding.CUSTOM,
+            custom_decoding_func=lambda input: json.loads(input.decode()),
+            custom_encoding_func=lambda input: json.dumps(input).encode(),
+        ),
+    ]
+    saver = BigtableSaver(
+        instance_id,
+        table_id,
+        client=client,
+        metadata_mappings=metadata_mappings,
+        metadata_as_json_encoding=Encoding.ASCII,
+        metadata_as_json_column_family="langchain",
+        metadata_as_json_column_name="metadata_as_json",
     )
+    loader = BigtableLoader(
+        instance_id,
+        table_id,
+        client=client,
+        metadata_mappings=metadata_mappings,
+        metadata_as_json_encoding=Encoding.ASCII,
+        metadata_as_json_column_family="langchain",
+        metadata_as_json_column_name="metadata_as_json",
+    )
+
+    written_docs = [
+        Document(
+            page_content="some content",
+            metadata={
+                "custom_key": {"a": 1, "b": 2},
+                "big_endian_int": 5,
+                "float": 3.14,
+                "double": 2.71,
+                "little_endian_int": 9,
+                "utf16": "string encoded as utf16",
+                "bool": True,
+                "rowkey": "SomeKey",
+                "key without mapping": "value",
+                "another key without mapping": 45,
+                "yet another key without mapping": False,
+            },
+        )
+    ]
+    saver.add_documents(written_docs)
+    returned_docs = loader.load()
+
+    assert len(returned_docs) == 1
+    assert returned_docs[0].page_content == "some content"
+
+    # Floats are encoded differently, losing precious, causing equality impossible
+    written_float = written_docs[0].metadata.pop("float")
+    returned_float = returned_docs[0].metadata.pop("float")
+    assert abs(written_float - returned_float) <= 0.001
+
+    # Compare the rest of the metadata dictionary
+    assert returned_docs[0].metadata == written_docs[0].metadata
+
+
+def test_bigtable_metadata_as_json_execution_order(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    write_metadata_mappings = [
+        MetadataMapping(
+            column_family="langchain",
+            column_name="column_name",
+            metadata_key="some_key",
+            encoding=Encoding.UTF16,
+        ),
+    ]
+    read_metadata_mapping = [
+        MetadataMapping(
+            column_family="langchain",
+            column_name="column_name",
+            metadata_key="another_key",
+            encoding=Encoding.UTF16,
+        ),
+    ]
+    saver = BigtableSaver(
+        instance_id,
+        table_id,
+        client=client,
+        metadata_mappings=write_metadata_mappings,
+        metadata_as_json_encoding=Encoding.ASCII,
+        metadata_as_json_column_family="langchain",
+        metadata_as_json_column_name="metadata_as_json",
+    )
+    loader = BigtableLoader(
+        instance_id,
+        table_id,
+        client=client,
+        metadata_mappings=read_metadata_mapping,
+        metadata_as_json_encoding=Encoding.ASCII,
+        metadata_as_json_column_family="langchain",
+        metadata_as_json_column_name="metadata_as_json",
+    )
+
+    written_docs = [
+        Document(
+            page_content="some content",
+            metadata={
+                "some_key": "expected value",
+                "another_key": "ignored value",
+                "rowkey": "SomeKey",
+            },
+        )
+    ]
+    saver.add_documents(written_docs)
+    returned_docs = loader.load()
+
+    assert len(returned_docs) == 1
+    assert returned_docs[0].page_content == "some content"
+
+    # Compare the metadata dictionary
+    assert returned_docs[0].metadata == {
+        "another_key": "expected value",
+        "rowkey": "SomeKey",
+    }
 
 
 def get_env_var(key: str, desc: str) -> str:
