@@ -24,7 +24,7 @@ from google.cloud import bigtable
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
-from .common import get_default_client
+from .common import use_client_or_default
 
 COLUMN_FAMILY = "langchain"
 CONTENT_COLUMN_NAME = "content"
@@ -101,7 +101,7 @@ class BigtableLoader(BaseLoader):
         self.row_set = row_set
         self.filter = filter
         self.client = (
-            (client or get_default_client()).instance(instance_id).table(table_id)
+            use_client_or_default(client).instance(instance_id).table(table_id)
         )
         if content_encoding not in SUPPORTED_TEXT_ENCODING:
             raise ValueError(
@@ -255,7 +255,7 @@ class BigtableSaver:
             metadata_as_json_encoding: Optional. The encoding in which to write the metadata as json. Defaults to UTF-8. Allowed values are UTF8, UTF16 and ASCII.
         """
         self.client = (
-            (client or get_default_client()).instance(instance_id).table(table_id)
+            use_client_or_default(client).instance(instance_id).table(table_id)
         )
         if content_encoding not in SUPPORTED_TEXT_ENCODING:
             raise ValueError(

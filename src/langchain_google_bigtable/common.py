@@ -14,13 +14,24 @@
 
 from typing import Optional
 
+from google.api_core.gapic_v1 import client_info
 from google.cloud import bigtable
 
 default_client: Optional[bigtable.Client] = None
+USER_AGENT = "langchain"
 
 
-def get_default_client() -> bigtable.Client:
+def use_client_or_default(client: Optional[bigtable.Client]) -> bigtable.Client:
+    if client:
+        client._client_info.user_agent = (
+            (client._client_info.user_agent or "") + " " + USER_AGENT
+        )
+        return client
+
     global default_client
     if default_client is None:
-        default_client = bigtable.Client(admin=True)
+        default_client = bigtable.Client(
+            admin=True,
+        )
+    default_client._client_info.user_agent = USER_AGENT
     return default_client
