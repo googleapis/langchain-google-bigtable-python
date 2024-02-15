@@ -14,11 +14,12 @@
 
 from typing import Optional
 
-from google.api_core.gapic_v1 import client_info
+import pkg_resources
 from google.cloud import bigtable
 
 default_client: Optional[bigtable.Client] = None
-USER_AGENT = "langchain"
+PACKAGE_NAME = "langchain-google-bigtable-python"
+USER_AGENT = PACKAGE_NAME + "/" + pkg_resources.get_distribution(PACKAGE_NAME).version
 
 
 def use_client_or_default(client: Optional[bigtable.Client]) -> bigtable.Client:
