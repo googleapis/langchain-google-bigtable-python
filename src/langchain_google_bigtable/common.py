@@ -31,8 +31,6 @@ def use_client_or_default(client: Optional[bigtable.Client]) -> bigtable.Client:
 
     global default_client
     if default_client is None:
-        default_client = bigtable.Client(
-            admin=True,
-        )
+        default_client = bigtable.Client(admin=True)
     default_client._client_info.user_agent = USER_AGENT
     return default_client
