@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from importlib.metadata import version
 from typing import Optional
 
-import pkg_resources
 from google.cloud import bigtable
 
 default_client: Optional[bigtable.Client] = None
 PACKAGE_NAME = "langchain-google-bigtable-python"
-USER_AGENT = PACKAGE_NAME + "/" + pkg_resources.get_distribution(PACKAGE_NAME).version
+USER_AGENT = PACKAGE_NAME + "/" + version("langchain-google-bigtable")
 
 
 def use_client_or_default(client: Optional[bigtable.Client]) -> bigtable.Client:
