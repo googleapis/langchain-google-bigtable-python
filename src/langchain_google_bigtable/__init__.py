@@ -14,7 +14,7 @@
 
 
 from .chat_message_history import BigtableChatMessageHistory, create_chat_history_table
-from .document_loader import BigtableLoader, BigtableSaver, Encoding, MetadataMapping
+from .loader import BigtableLoader, BigtableSaver, Encoding, MetadataMapping
 from .version import __version__
 
 __all__ = [
