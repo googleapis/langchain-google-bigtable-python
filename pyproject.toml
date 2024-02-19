@@ -1,6 +1,6 @@
 [project]
 name = "langchain-google-bigtable"
-version = "0.0.1"
+dynamic = ["version"]
 description = "LangChain integrations for Google Cloud Bigtable"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -9,6 +9,9 @@ dependencies = [
     "langchain==0.1.1",
     "google-cloud-bigtable==2.22.0"
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "langchain_google_bigtable.version.__version__"}
 
 [project.urls]
 Homepage = "https://github.com/googleapis/langchain-google-bigtable-python"
