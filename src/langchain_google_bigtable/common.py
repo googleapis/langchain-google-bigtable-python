@@ -13,24 +13,28 @@
 # limitations under the License.
 
 from importlib.metadata import version
-from typing import Optional
+from typing import Dict, Optional
 
 from google.cloud import bigtable
 
-default_client: Optional[bigtable.Client] = None
-PACKAGE_NAME = "langchain-google-bigtable-python"
-USER_AGENT = PACKAGE_NAME + "/" + version("langchain-google-bigtable")
+from .version import __version__
+
+PACKAGE_PREFIX = "langchain-google-bigtable-python:"
+clients: Dict[str, bigtable.Client] = {}
 
 
-def use_client_or_default(client: Optional[bigtable.Client]) -> bigtable.Client:
-    if client:
-        client._client_info.user_agent = (
-            (client._client_info.user_agent or "") + " " + USER_AGENT
-        )
-        return client
+def use_client_or_default(
+    client: Optional[bigtable.Client], client_name: str
+) -> bigtable.Client:
+    user_agent = PACKAGE_PREFIX + client_name + "/" + __version__
+    global clients
+    if not client:
+        client = clients.get(client_name, bigtable.Client(admin=True))
+        clients[client_name] = client
 
-    global default_client
-    if default_client is None:
-        default_client = bigtable.Client(admin=True)
-    default_client._client_info.user_agent = USER_AGENT
-    return default_client
+    client_agent = client._client_info.user_agent
+    if not client_agent:
+        client._client_info.user_agent = user_agent
+    elif user_agent not in client_agent:
+        client._client_info.user_agent = " ".join([client_agent, user_agent])
+    return client

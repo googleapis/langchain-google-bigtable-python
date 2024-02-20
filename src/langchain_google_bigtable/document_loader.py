@@ -101,7 +101,9 @@ class BigtableLoader(BaseLoader):
         self.row_set = row_set
         self.filter = filter
         self.client = (
-            use_client_or_default(client).instance(instance_id).table(table_id)
+            use_client_or_default(client, "document_loader")
+            .instance(instance_id)
+            .table(table_id)
         )
         if content_encoding not in SUPPORTED_TEXT_ENCODING:
             raise ValueError(
@@ -255,7 +257,9 @@ class BigtableSaver:
             metadata_as_json_encoding: Optional. The encoding in which to write the metadata as json. Defaults to UTF-8. Allowed values are UTF8, UTF16 and ASCII.
         """
         self.client = (
-            use_client_or_default(client).instance(instance_id).table(table_id)
+            use_client_or_default(client, "document_saver")
+            .instance(instance_id)
+            .table(table_id)
         )
         if content_encoding not in SUPPORTED_TEXT_ENCODING:
             raise ValueError(

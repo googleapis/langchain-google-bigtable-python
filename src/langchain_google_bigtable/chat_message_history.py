@@ -37,7 +37,11 @@ def create_chat_history_table(
     table_id: str,
     client: Optional[bigtable.Client] = None,
 ):
-    table_client = use_client_or_default(client).instance(instance_id).table(table_id)
+    table_client = (
+        use_client_or_default(client, "chat_message_history")
+        .instance(instance_id)
+        .table(table_id)
+    )
     if not table_client.exists():
         table_client.create()
 
@@ -65,7 +69,9 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         session_id: str,
         client: Optional[bigtable.Client] = None,
     ) -> None:
-        instance = use_client_or_default(client).instance(instance_id)
+        instance = use_client_or_default(client, "chat_message_history").instance(
+            instance_id
+        )
         if not instance.exists():
             raise NameError(f"Instance {instance_id} does not exist")
 
