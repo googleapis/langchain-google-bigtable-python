@@ -26,7 +26,7 @@ from google.cloud.bigtable.row_filters import RowKeyRegexFilter
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict
 
-from .common import get_default_client
+from .common import use_client_or_default
 
 COLUMN_FAMILY = "langchain"
 COLUMN_NAME = "history"
@@ -38,7 +38,9 @@ def create_chat_history_table(
     client: Optional[bigtable.Client] = None,
 ):
     table_client = (
-        (client or get_default_client()).instance(instance_id).table(table_id)
+        use_client_or_default(client, "chat_history")
+        .instance(instance_id)
+        .table(table_id)
     )
     if not table_client.exists():
         table_client.create()
@@ -67,7 +69,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         session_id: str,
         client: Optional[bigtable.Client] = None,
     ) -> None:
-        instance = (client or get_default_client()).instance(instance_id)
+        instance = use_client_or_default(client, "chat_history").instance(instance_id)
         if not instance.exists():
             raise NameError(f"Instance {instance_id} does not exist")
 
