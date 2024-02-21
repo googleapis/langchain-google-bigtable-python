@@ -69,7 +69,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         session_id: str,
         client: Optional[bigtable.Client] = None,
     ) -> None:
-        instance = use_client_or_default(client, "chat_message_history").instance(
+        instance = use_client_or_default(client, "chat_history").instance(
             instance_id
         )
         if not instance.exists():
