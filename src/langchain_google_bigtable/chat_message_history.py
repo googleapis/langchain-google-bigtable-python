@@ -38,7 +38,7 @@ def create_chat_history_table(
     client: Optional[bigtable.Client] = None,
 ):
     table_client = (
-        use_client_or_default(client, "chat_message_history")
+        use_client_or_default(client, "chat_history")
         .instance(instance_id)
         .table(table_id)
     )
