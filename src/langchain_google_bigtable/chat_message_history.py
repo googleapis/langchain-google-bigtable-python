@@ -21,8 +21,8 @@ import time
 import uuid
 from typing import List, Optional
 
-from google.cloud import bigtable
-from google.cloud.bigtable.row_filters import RowKeyRegexFilter
+from google.cloud import bigtable  # type: ignore
+from google.cloud.bigtable.row_filters import RowKeyRegexFilter  # type: ignore
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict
 

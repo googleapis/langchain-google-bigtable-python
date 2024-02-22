@@ -22,7 +22,7 @@ from multiprocessing import Process
 from typing import Iterator
 
 import pytest
-from google.cloud import bigtable
+from google.cloud import bigtable  # type: ignore
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from langchain_google_bigtable.chat_message_history import (
