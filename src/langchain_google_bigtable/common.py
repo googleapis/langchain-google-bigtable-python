@@ -15,7 +15,7 @@
 from importlib.metadata import version
 from typing import Dict, Optional
 
-from google.cloud import bigtable
+from google.cloud import bigtable  # type: ignore
 
 from .version import __version__
 

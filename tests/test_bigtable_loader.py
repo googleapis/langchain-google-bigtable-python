@@ -20,8 +20,8 @@ import time
 from typing import Iterator
 
 import pytest
-from google.cloud import bigtable
-from google.cloud.bigtable import column_family, row_filters
+from google.cloud import bigtable  # type: ignore
+from google.cloud.bigtable import column_family, row_filters  # type: ignore
 from langchain_core.documents import Document
 
 from langchain_google_bigtable.loader import (
