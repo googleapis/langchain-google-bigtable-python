@@ -203,27 +203,26 @@ class BigtableLoader(BaseLoader):
             )
 
     def _decode(self, value: bytes, mapping: MetadataMapping) -> Any:
-        match mapping.encoding:
-            case Encoding.UTF8:
-                return value.decode(mapping.encoding.value)
-            case Encoding.UTF16:
-                return value.decode(mapping.encoding.value)
-            case Encoding.ASCII:
-                return value.decode(mapping.encoding.value)
-            case Encoding.INT_LITTLE_ENDIAN:
-                return int.from_bytes(value, "little")
-            case Encoding.INT_BIG_ENDIAN:
-                return int.from_bytes(value, "big")
-            case Encoding.DOUBLE:
-                return struct.unpack("d", value)[0]
-            case Encoding.FLOAT:
-                return struct.unpack("f", value)[0]
-            case Encoding.BOOL:
-                return bool.from_bytes(value)
-            case Encoding.CUSTOM:
-                return mapping.custom_decoding_func(value)
-            case _:
-                raise ValueError(f"Invalid encoding {mapping.encoding}")
+        if mapping.encoding == Encoding.UTF8:
+            return value.decode(mapping.encoding.value)
+        elif mapping.encoding == Encoding.UTF16:
+            return value.decode(mapping.encoding.value)
+        elif mapping.encoding == Encoding.ASCII:
+            return value.decode(mapping.encoding.value)
+        elif mapping.encoding == Encoding.INT_LITTLE_ENDIAN:
+            return int.from_bytes(value, "little")
+        elif mapping.encoding == Encoding.INT_BIG_ENDIAN:
+            return int.from_bytes(value, "big")
+        elif mapping.encoding == Encoding.DOUBLE:
+            return struct.unpack("d", value)[0]
+        elif mapping.encoding == Encoding.FLOAT:
+            return struct.unpack("f", value)[0]
+        elif mapping.encoding == Encoding.BOOL:
+            return bool.from_bytes(value)
+        elif mapping.encoding == Encoding.CUSTOM:
+            return mapping.custom_decoding_func(value)
+        else:
+            raise ValueError(f"Invalid encoding {mapping.encoding}")
 
 
 class BigtableSaver:
@@ -349,24 +348,23 @@ class BigtableSaver:
         batcher.flush()
 
     def _encode(self, value: Any, mapping: MetadataMapping) -> bytes:
-        match mapping.encoding:
-            case Encoding.UTF8:
-                return value.encode(mapping.encoding.value)
-            case Encoding.UTF16:
-                return value.encode(mapping.encoding.value)
-            case Encoding.ASCII:
-                return value.encode(mapping.encoding.value)
-            case Encoding.INT_LITTLE_ENDIAN:
-                return int.to_bytes(value, byteorder="little")
-            case Encoding.INT_BIG_ENDIAN:
-                return int.to_bytes(value, byteorder="big")
-            case Encoding.DOUBLE:
-                return struct.pack("d", value)
-            case Encoding.FLOAT:
-                return struct.pack("f", value)
-            case Encoding.BOOL:
-                return bool.to_bytes(value)
-            case Encoding.CUSTOM:
-                return mapping.custom_encoding_func(value)
-            case _:
-                raise ValueError(f"Invalid encoding {mapping.encoding}")
+        if mapping.encoding == Encoding.UTF8:
+            return value.encode(mapping.encoding.value)
+        elif mapping.encoding == Encoding.UTF16:
+            return value.encode(mapping.encoding.value)
+        elif mapping.encoding == Encoding.ASCII:
+            return value.encode(mapping.encoding.value)
+        elif mapping.encoding == Encoding.INT_LITTLE_ENDIAN:
+            return int.to_bytes(value, byteorder="little")
+        elif mapping.encoding == Encoding.INT_BIG_ENDIAN:
+            return int.to_bytes(value, byteorder="big")
+        elif mapping.encoding == Encoding.DOUBLE:
+            return struct.pack("d", value)
+        elif mapping.encoding == Encoding.FLOAT:
+            return struct.pack("f", value)
+        elif mapping.encoding == Encoding.BOOL:
+            return bool.to_bytes(value)
+        elif mapping.encoding == Encoding.CUSTOM:
+            return mapping.custom_encoding_func(value)
+        else:
+            raise ValueError(f"Invalid encoding {mapping.encoding}")
