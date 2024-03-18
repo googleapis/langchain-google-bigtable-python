@@ -30,3 +30,9 @@ steps:
     env:
       - "PROJECT_ID=$PROJECT_ID"
       - "INSTANCE_ID=test-instance"
+
+substitutions:
+  _VERSION: "3.8"
+
+options:
+  dynamicSubstitutions: true
