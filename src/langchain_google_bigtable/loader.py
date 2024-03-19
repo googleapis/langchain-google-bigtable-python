@@ -355,15 +355,17 @@ class BigtableSaver:
         elif mapping.encoding is Encoding.ASCII:
             return value.encode(mapping.encoding.value)
         elif mapping.encoding is Encoding.INT_LITTLE_ENDIAN:
-            return int.to_bytes(value, byteorder="little")
+            return int.to_bytes(
+                value, byteorder="little", length=1
+            )  # Length does not have default version < 3.11
         elif mapping.encoding is Encoding.INT_BIG_ENDIAN:
-            return int.to_bytes(value, byteorder="big")
+            return int.to_bytes(value, byteorder="big", length=1)
         elif mapping.encoding is Encoding.DOUBLE:
             return struct.pack("d", value)
         elif mapping.encoding is Encoding.FLOAT:
             return struct.pack("f", value)
         elif mapping.encoding is Encoding.BOOL:
-            return bool.to_bytes(value)
+            return bool.to_bytes(value, length=1)
         elif mapping.encoding is Encoding.CUSTOM:
             return mapping.custom_encoding_func(value)
         else:
