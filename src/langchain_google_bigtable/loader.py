@@ -218,7 +218,7 @@ class BigtableLoader(BaseLoader):
         elif mapping.encoding is Encoding.FLOAT:
             return struct.unpack("f", value)[0]
         elif mapping.encoding is Encoding.BOOL:
-            return bool.from_bytes(value)
+            return bool(value)
         elif mapping.encoding is Encoding.CUSTOM:
             return mapping.custom_decoding_func(value)
         else:
@@ -355,9 +355,8 @@ class BigtableSaver:
         elif mapping.encoding is Encoding.ASCII:
             return value.encode(mapping.encoding.value)
         elif mapping.encoding is Encoding.INT_LITTLE_ENDIAN:
-            return int.to_bytes(
-                value, byteorder="little", length=1
-            )  # Length does not have default version < 3.11
+            # Length does not have default version < 3.11
+            return int.to_bytes(value, byteorder="little", length=1)
         elif mapping.encoding is Encoding.INT_BIG_ENDIAN:
             return int.to_bytes(value, byteorder="big", length=1)
         elif mapping.encoding is Encoding.DOUBLE:
@@ -365,7 +364,7 @@ class BigtableSaver:
         elif mapping.encoding is Encoding.FLOAT:
             return struct.pack("f", value)
         elif mapping.encoding is Encoding.BOOL:
-            return bool.to_bytes(value, length=1)
+            return bytes((value,))
         elif mapping.encoding is Encoding.CUSTOM:
             return mapping.custom_encoding_func(value)
         else:
