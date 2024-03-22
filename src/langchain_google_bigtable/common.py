@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from importlib.metadata import version
 from typing import Dict, Optional
 
 from google.cloud import bigtable  # type: ignore
+from google.cloud.bigtable_admin_v2.services.bigtable_instance_admin.transports.base import (
+    DEFAULT_CLIENT_INFO,
+)
 
 from .version import __version__
 
@@ -27,9 +29,13 @@ def use_client_or_default(
     client: Optional[bigtable.Client], client_name: str
 ) -> bigtable.Client:
     user_agent = PACKAGE_PREFIX + client_name + "/" + __version__
+    client_info = DEFAULT_CLIENT_INFO
+    client_info.user_agent = user_agent
     global clients
     if not client:
-        client = clients.get(client_name, bigtable.Client(admin=True))
+        client = clients.get(
+            client_name, bigtable.Client(admin=True, client_info=client_info)
+        )
         clients[client_name] = client
 
     client_agent = client._client_info.user_agent
