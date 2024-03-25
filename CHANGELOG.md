@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.1.0...v0.2.0) (2024-03-25)
+
+
+### Features
+
+* **ci:** Test against multiple versions ([#34](https://github.com/googleapis/langchain-google-bigtable-python/issues/34)) ([519dea7](https://github.com/googleapis/langchain-google-bigtable-python/commit/519dea78e01b1948fc3f97f3ae7bbd5b23d92808))
+
+
+### Bug Fixes
+
+* Update user agent ([#35](https://github.com/googleapis/langchain-google-bigtable-python/issues/35)) ([3ae5287](https://github.com/googleapis/langchain-google-bigtable-python/commit/3ae528784920830d92dabfb1d6ddccd886068e08))
+
+
+### Documentation
+
+* Add github links ([#27](https://github.com/googleapis/langchain-google-bigtable-python/issues/27)) ([f012074](https://github.com/googleapis/langchain-google-bigtable-python/commit/f0120742cb6646fc9b90cd25169b42ad19d2734a))
+
 ## 0.1.0 (2024-02-26)
 
 
