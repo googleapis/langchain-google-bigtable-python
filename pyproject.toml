@@ -27,7 +27,7 @@ Changelog = "https://github.com/googleapis/langchain-google-bigtable-python/blob
 test = [
     "black[jupyter]==23.12.1",
     "isort==5.13.2",
-    "mypy==1.7.1",
+    "mypy==1.9.0",
     "pytest-asyncio==0.23.5.post1",
     "pytest==7.4.4"
 ]
@@ -42,3 +42,7 @@ profile = "black"
 [tool.mypy]
 python_version = "3.11"
 warn_unused_configs = true
+
+[mypy-google]
+ignore_missing_imports = true
+
