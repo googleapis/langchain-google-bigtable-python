@@ -42,7 +42,3 @@ profile = "black"
 [tool.mypy]
 python_version = "3.11"
 warn_unused_configs = true
-
-[mypy-google]
-ignore_missing_imports = true
-
