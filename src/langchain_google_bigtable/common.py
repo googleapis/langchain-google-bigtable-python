@@ -15,8 +15,8 @@
 from typing import Dict, Optional
 
 from google.cloud import bigtable  # type: ignore
-from google.cloud.bigtable_admin_v2.services.bigtable_instance_admin.transports.base import (  # type: ignore
-    DEFAULT_CLIENT_INFO,
+from google.cloud.bigtable_admin_v2.services.bigtable_instance_admin.transports.base import (
+    DEFAULT_CLIENT_INFO,  # type: ignore
 )
 
 from .version import __version__
