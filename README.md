@@ -43,7 +43,7 @@ from langchain_google_bigtable import BigtableLoader
 
 loader = BigtableLoader(
     instance_id="my-instance",
-    table_name="my-table-name"
+    table_id="my-table-name"
 )
 docs = loader.lazy_load()
 ```
@@ -60,7 +60,7 @@ from langchain_google_bigtable import BigtableChatMessageHistory
 
 history = BigtableChatMessageHistory(
     instance_id="my-instance",
-    table_name="my-message-store",
+    table_id="my-message-store",
     session_id="my-session_id"
 )
 ```
