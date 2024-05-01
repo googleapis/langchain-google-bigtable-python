@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.2.0...v0.2.1) (2024-05-01)
+
+
+### Documentation
+
+* Add API reference docs ([#47](https://github.com/googleapis/langchain-google-bigtable-python/issues/47)) ([cc68cc6](https://github.com/googleapis/langchain-google-bigtable-python/commit/cc68cc6dd8ff5778ee85cef88e659bd5db586376))
+
 ## [0.2.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.1.0...v0.2.0) (2024-03-25)
 
 
