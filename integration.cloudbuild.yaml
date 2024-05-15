@@ -27,7 +27,7 @@ steps:
     name: python:${_VERSION}
     args: ["-m", "pytest", "--cov=langchain_google_bigtable", "--cov-config=.coveragerc", "tests/"]
     entrypoint: python
-    args: ["-m", "pytest", "--cov=langchain_google_bigtable", "--cov-config=.coveragerc", "tests/"]    env:
+    env:
       - "PROJECT_ID=$PROJECT_ID"
       - "INSTANCE_ID=test-instance"
 
