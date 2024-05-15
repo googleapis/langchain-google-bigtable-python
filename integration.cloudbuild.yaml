@@ -26,8 +26,7 @@ steps:
   - id: Run integration tests
     name: python:${_VERSION}
     entrypoint: python
-    args: ["-m", "pytest"]
-    env:
+    args: ["-m", "pytest", "--cov=langchain_google_bigtable", "--cov-config=.coveragerc", "tests/"]    env:
       - "PROJECT_ID=$PROJECT_ID"
       - "INSTANCE_ID=test-instance"
 
