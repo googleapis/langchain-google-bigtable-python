@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.2.1...v0.2.2) (2024-06-25)
+
+
+### Bug Fixes
+
+* Increase delay in test ([#60](https://github.com/googleapis/langchain-google-bigtable-python/issues/60)) ([f3ac73a](https://github.com/googleapis/langchain-google-bigtable-python/commit/f3ac73a1e55b7387997334129a2a8e8661e7cc9a))
+
 ## [0.2.1](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.2.0...v0.2.1) (2024-05-01)
 
 
