@@ -100,7 +100,7 @@ def test_bigtable_loads_of_messages(
     saver.add_documents(written_docs)
 
     # wait for eventual consistency
-    time.sleep(10)
+    time.sleep(20)
 
     returned_docs = loader.load()
 
@@ -113,7 +113,7 @@ def test_bigtable_loads_of_messages(
     saver.delete(returned_docs[:-1])
 
     # wait for eventual consistency
-    time.sleep(10)
+    time.sleep(20)
 
     returned_docs = loader.load()
     assert len(returned_docs) == 1
