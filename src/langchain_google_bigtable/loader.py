@@ -81,7 +81,7 @@ class BigtableLoader(BaseLoader):
         metadata_as_json_column_family: Optional[str] = None,
         metadata_as_json_column_name: Optional[str] = None,
         metadata_as_json_encoding: Encoding = Encoding.UTF8,
-    ):
+    ) -> None:
         """Initialize Bigtable document loader.
 
         Args:
@@ -240,7 +240,7 @@ class BigtableSaver:
         metadata_as_json_column_family: Optional[str] = None,
         metadata_as_json_column_name: Optional[str] = None,
         metadata_as_json_encoding: Encoding = Encoding.UTF8,
-    ):
+    ) -> None:
         """Initialize Bigtable document saver.
 
         Args:
@@ -307,7 +307,7 @@ class BigtableSaver:
         self.metadata_as_json_column_name = metadata_as_json_column_name
         self.metadata_as_json_encoding = metadata_as_json_encoding
 
-    def add_documents(self, docs: List[Document]):
+    def add_documents(self, docs: List[Document]) -> None:
         batcher = self.client.mutations_batcher()
         for doc in docs:
             row_key = doc.metadata.get(ID_METADATA_KEY) or uuid.uuid4().hex
@@ -339,7 +339,7 @@ class BigtableSaver:
             batcher.mutate(row)
         batcher.flush()
 
-    def delete(self, docs: List[Document]):
+    def delete(self, docs: List[Document]) -> None:
         batcher = self.client.mutations_batcher()
         for doc in docs:
             row = self.client.direct_row(doc.metadata.get(ID_METADATA_KEY))
