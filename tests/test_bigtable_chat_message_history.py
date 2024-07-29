@@ -17,6 +17,7 @@ import os
 import random
 import re
 import string
+import time
 import uuid
 from multiprocessing import Process
 from typing import Iterator
@@ -116,6 +117,9 @@ def test_bigtable_loads_of_messages(
 
     for p in proc:
         p.join()
+
+    # wait for eventual consistency
+    time.sleep(20)
 
     messages = history.messages
 
