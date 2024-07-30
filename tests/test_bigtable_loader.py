@@ -31,7 +31,7 @@ from langchain_google_bigtable.loader import (
     MetadataMapping,
 )
 
-TABLE_ID_PREFIX = "test-table-"
+TABLE_ID_PREFIX = "test-table-loader-"
 
 
 @pytest.fixture
@@ -397,7 +397,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            content_column_family="non_existent_family",
+            content_column_family=non_existent_family,
         )
     assert str(excinfo.value).startswith(error_prefix)
     with pytest.raises(ValueError) as excinfo:
@@ -405,7 +405,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            content_column_family="non_existent_family",
+            content_column_family=non_existent_family,
         )
     assert str(excinfo.value).startswith(error_prefix)
 
@@ -415,7 +415,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            metadata_as_json_column_family="non_existent_family",
+            metadata_as_json_column_family=non_existent_family,
             metadata_as_json_column_name="not_None",
         )
     assert str(excinfo.value).startswith(error_prefix)
@@ -424,7 +424,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            metadata_as_json_column_family="non_existent_family",
+            metadata_as_json_column_family=non_existent_family,
             metadata_as_json_column_name="not_None",
         )
     assert str(excinfo.value).startswith(error_prefix)
