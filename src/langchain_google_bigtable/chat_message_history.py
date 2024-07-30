@@ -112,7 +112,6 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
             + "#"
             + uuid.uuid4().hex
         )
-
         row = self.table_client.direct_row(row_key)
         value = str.encode(message.json())
         row.set_cell(COLUMN_FAMILY, COLUMN_NAME, value)
