@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.2.2...v0.2.3) (2024-07-30)
+
+
+### Bug Fixes
+
+* Add return type annotation where missing ([#73](https://github.com/googleapis/langchain-google-bigtable-python/issues/73)) ([f4fbd26](https://github.com/googleapis/langchain-google-bigtable-python/commit/f4fbd26a8c25b1a4dd35a2d859ac917b40c9526c))
+* Fixed issue with messages history tests ([#76](https://github.com/googleapis/langchain-google-bigtable-python/issues/76)) ([bcb95d7](https://github.com/googleapis/langchain-google-bigtable-python/commit/bcb95d7dde47e29d42421388f207dc80f897214d))
+
 ## [0.2.2](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.2.1...v0.2.2) (2024-06-25)
 
 
