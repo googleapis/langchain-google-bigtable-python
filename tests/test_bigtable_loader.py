@@ -24,11 +24,6 @@ from google.cloud import bigtable  # type: ignore
 from google.cloud.bigtable import column_family, row_filters  # type: ignore
 from langchain_core.documents import Document
 
-
-import logging
-
-LOGGER = logging.getLogger(__name__)
-
 from langchain_google_bigtable.loader import (
     BigtableLoader,
     BigtableSaver,
@@ -376,8 +371,6 @@ def test_bigtable_missing_column_family(
 ) -> None:
     non_existent_family = "non_existent_family"
     error_prefix = f"column family '{non_existent_family}' doesn't exist in table. Existing column families are "
-    # LOGGER.error(families)
-    LOGGER.error("RONNNNN")
     # Metadata mapping content family
     metadata_mappings = [
         MetadataMapping(
@@ -388,11 +381,9 @@ def test_bigtable_missing_column_family(
         ),
     ]
     with pytest.raises(ValueError) as excinfo:
-        LOGGER.error("RONNNNNNNNN")
         BigtableLoader(
             instance_id, table_id, client=client, metadata_mappings=metadata_mappings
         )
-    LOGGER.error("RONNNNNNNNN1231231")
     assert str(excinfo.value).startswith(error_prefix)
     with pytest.raises(ValueError) as excinfo:
         BigtableSaver(
