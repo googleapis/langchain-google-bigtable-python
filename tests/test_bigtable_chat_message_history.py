@@ -31,7 +31,7 @@ from langchain_google_bigtable.chat_message_history import (
     create_chat_history_table,
 )
 
-TABLE_ID_PREFIX = "test-table-"
+TABLE_ID_PREFIX = "test-table-history-"
 
 
 @pytest.fixture
@@ -100,26 +100,29 @@ def test_bigtable_loads_of_messages(
 
     proc = []
     for i in range(NUM_MESSAGES):
-        p = Process(
-            target=lambda i: history.add_ai_message(f"Hey! I am AI! Index: {2*i}"),
-            args=[i],
+        proc.append(
+            Process(
+                target=lambda i: history.add_ai_message(f"Hey! I am AI! Index: {2*i}"),
+                args=[i],
+            )
         )
-        p.start()
-        proc.append(p)
-        p = Process(
-            target=lambda i: history.add_user_message(
-                f"Hey! I am human! Index: {2*i+1}"
-            ),
-            args=[i],
+        proc.append(
+            Process(
+                target=lambda i: history.add_user_message(
+                    f"Hey! I am human! Index: {2*i+1}"
+                ),
+                args=[i],
+            )
         )
+
+    for p in proc:
         p.start()
-        proc.append(p)
 
     for p in proc:
         p.join()
 
     # wait for eventual consistency
-    time.sleep(20)
+    time.sleep(5)
 
     messages = history.messages
 

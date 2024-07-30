@@ -24,6 +24,11 @@ from google.cloud import bigtable  # type: ignore
 from google.cloud.bigtable import column_family, row_filters  # type: ignore
 from langchain_core.documents import Document
 
+
+import logging
+
+LOGGER = logging.getLogger(__name__)
+
 from langchain_google_bigtable.loader import (
     BigtableLoader,
     BigtableSaver,
@@ -31,7 +36,7 @@ from langchain_google_bigtable.loader import (
     MetadataMapping,
 )
 
-TABLE_ID_PREFIX = "test-table-"
+TABLE_ID_PREFIX = "test-table-loader-"
 
 
 @pytest.fixture
@@ -371,6 +376,8 @@ def test_bigtable_missing_column_family(
 ) -> None:
     non_existent_family = "non_existent_family"
     error_prefix = f"column family '{non_existent_family}' doesn't exist in table. Existing column families are "
+    # LOGGER.error(families)
+    LOGGER.error("RONNNNN")
     # Metadata mapping content family
     metadata_mappings = [
         MetadataMapping(
@@ -381,9 +388,11 @@ def test_bigtable_missing_column_family(
         ),
     ]
     with pytest.raises(ValueError) as excinfo:
+        LOGGER.error("RONNNNNNNNN")
         BigtableLoader(
             instance_id, table_id, client=client, metadata_mappings=metadata_mappings
         )
+    LOGGER.error("RONNNNNNNNN1231231")
     assert str(excinfo.value).startswith(error_prefix)
     with pytest.raises(ValueError) as excinfo:
         BigtableSaver(
@@ -397,7 +406,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            content_column_family="non_existent_family",
+            content_column_family=non_existent_family,
         )
     assert str(excinfo.value).startswith(error_prefix)
     with pytest.raises(ValueError) as excinfo:
@@ -405,7 +414,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            content_column_family="non_existent_family",
+            content_column_family=non_existent_family,
         )
     assert str(excinfo.value).startswith(error_prefix)
 
@@ -415,7 +424,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            metadata_as_json_column_family="non_existent_family",
+            metadata_as_json_column_family=non_existent_family,
             metadata_as_json_column_name="not_None",
         )
     assert str(excinfo.value).startswith(error_prefix)
@@ -424,7 +433,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            metadata_as_json_column_family="non_existent_family",
+            metadata_as_json_column_family=non_existent_family,
             metadata_as_json_column_name="not_None",
         )
     assert str(excinfo.value).startswith(error_prefix)
