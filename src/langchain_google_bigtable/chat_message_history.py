@@ -20,6 +20,7 @@ import re
 import time
 import uuid
 from typing import List, Optional
+import threading
 
 from google.cloud import bigtable  # type: ignore
 from google.cloud.bigtable.row_filters import RowKeyRegexFilter  # type: ignore
@@ -48,7 +49,7 @@ def create_chat_history_table(
     families = table_client.list_column_families()
     if COLUMN_FAMILY not in families:
         table_client.column_family(
-            COLUMN_FAMILY, gc_rule=bigtable.column_family.MaxVersionsGCRule(1)
+            COLUMN_FAMILY, gc_rule=bigtable.column_family.MaxVersionsGCRule(10)
         ).create()
 
 
@@ -69,6 +70,9 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         session_id: str,
         client: Optional[bigtable.Client] = None,
     ) -> None:
+        self.threadLock = threading.Lock()
+        self.index = 1
+
         instance = use_client_or_default(client, "chat_history").instance(instance_id)
         if not instance.exists():
             raise NameError(f"Instance {instance_id} does not exist")
@@ -105,14 +109,19 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
     def add_message(self, message: BaseMessage) -> None:
         """Write a message to the table"""
 
-        row_key = str.encode(
+        row_key = (
             self.session_id
             + "#"
             + str(time.time_ns()).rjust(25, "0")
             + "#"
             + uuid.uuid4().hex
         )
-        row = self.table_client.direct_row(row_key)
+
+        with self.threadLock:
+            # row_key = row_key + "#" + str(self.index)
+            self.index += 1
+
+        row = self.table_client.direct_row(str.encode(row_key))
         value = str.encode(message.json())
         row.set_cell(COLUMN_FAMILY, COLUMN_NAME, value)
         row.commit()
