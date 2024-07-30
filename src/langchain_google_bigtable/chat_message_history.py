@@ -48,7 +48,7 @@ def create_chat_history_table(
     families = table_client.list_column_families()
     if COLUMN_FAMILY not in families:
         table_client.column_family(
-            COLUMN_FAMILY, gc_rule=bigtable.column_family.MaxVersionsGCRule(10)
+            COLUMN_FAMILY, gc_rule=bigtable.column_family.MaxVersionsGCRule(1)
         ).create()
 
 
@@ -105,7 +105,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
     def add_message(self, message: BaseMessage) -> None:
         """Write a message to the table"""
 
-        row_key = (
+        row_key = str.encode(
             self.session_id
             + "#"
             + str(time.time_ns()).rjust(25, "0")
@@ -113,7 +113,7 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
             + uuid.uuid4().hex
         )
 
-        row = self.table_client.direct_row(str.encode(row_key))
+        row = self.table_client.direct_row(row_key)
         value = str.encode(message.json())
         row.set_cell(COLUMN_FAMILY, COLUMN_NAME, value)
         row.commit()
