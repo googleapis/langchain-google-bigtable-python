@@ -120,6 +120,7 @@ def test_bigtable_loads_of_messages(
 
     for p in proc:
         p.join()
+        assert p.exitcode == 0
 
     # wait for eventual consistency
     time.sleep(5)

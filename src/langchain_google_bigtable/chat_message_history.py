@@ -20,7 +20,6 @@ import re
 import time
 import uuid
 from typing import List, Optional
-import threading
 
 from google.cloud import bigtable  # type: ignore
 from google.cloud.bigtable.row_filters import RowKeyRegexFilter  # type: ignore
@@ -70,9 +69,6 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         session_id: str,
         client: Optional[bigtable.Client] = None,
     ) -> None:
-        self.threadLock = threading.Lock()
-        self.index = 1
-
         instance = use_client_or_default(client, "chat_history").instance(instance_id)
         if not instance.exists():
             raise NameError(f"Instance {instance_id} does not exist")
@@ -116,10 +112,6 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
             + "#"
             + uuid.uuid4().hex
         )
-
-        with self.threadLock:
-            # row_key = row_key + "#" + str(self.index)
-            self.index += 1
 
         row = self.table_client.direct_row(str.encode(row_key))
         value = str.encode(message.json())
