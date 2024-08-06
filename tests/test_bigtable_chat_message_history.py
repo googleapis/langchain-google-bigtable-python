@@ -101,7 +101,7 @@ def test_bigtable_loads_of_messages(
     )
 
     def add_ai_message(history, i):
-        for _ in range(5):
+        for _ in range(1):
             try:
                 history.add_ai_message(f"Hey! I am AI! Index: {2*i}")
                 break
@@ -112,7 +112,7 @@ def test_bigtable_loads_of_messages(
                 time.sleep(1)
 
     def add_user_message(history, i):
-        for _ in range(5):
+        for _ in range(1):
             try:
                 history.add_user_message(f"Hey! I am human! Index: {2*i+1}")
                 break
