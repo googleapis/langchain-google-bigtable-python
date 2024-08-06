@@ -106,7 +106,7 @@ def test_bigtable_loads_of_messages(
                 history.add_ai_message(f"Hey! I am AI! Index: {2*i}")
                 break
             except Exception as e:
-                print("ronnnnn test: " + e)
+                print(e)
                 traceback.print_exc()
                 logging.exception("An exception was thrown!")
                 time.sleep(1)
@@ -117,7 +117,7 @@ def test_bigtable_loads_of_messages(
                 history.add_user_message(f"Hey! I am human! Index: {2*i+1}")
                 break
             except Exception as e:
-                print("ronnnnn test: " + e)
+                print(e)
                 traceback.print_exc()
                 logging.exception("An exception was thrown!")
                 time.sleep(1)
