@@ -106,7 +106,9 @@ def test_bigtable_loads_of_messages(
                 history.add_ai_message(f"Hey! I am AI! Index: {2*i}")
                 break
             except Exception as e:
+                print("ron test 1")
                 print(e)
+                print(e.__cause__)
                 traceback.print_exc()
                 traceback.print_exception(e)
                 time.sleep(1)
@@ -117,7 +119,9 @@ def test_bigtable_loads_of_messages(
                 history.add_user_message(f"Hey! I am human! Index: {2*i+1}")
                 break
             except Exception as e:
+                print("ron test 2")
                 print(e)
+                print(e.__cause__)
                 traceback.print_exc()
                 traceback.print_exception(e)
                 time.sleep(1)
