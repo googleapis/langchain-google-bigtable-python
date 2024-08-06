@@ -13,15 +13,12 @@
 # limitations under the License.
 
 
-import logging
 import os
 import random
 import re
 import string
 import time
-import traceback
 import uuid
-from multiprocessing import Process
 from typing import Iterator
 
 import pytest
@@ -100,11 +97,13 @@ def test_bigtable_loads_of_messages(
         instance_id, table_id, session_id, client=client
     )
 
-    messages = []
+    ai_messages = []
+    human_messages = []
     for i in range(NUM_MESSAGES):
-        messages.append(AIMessage(content=f"Hey! I am AI! Index: {2*i}"))
-        messages.append(HumanMessage(content=f"Hey! I am human! Index: {2*i+1}"))
-    history.add_messages(messages)
+        ai_messages.append(AIMessage(content=f"Hey! I am AI! Index: {2*i}"))
+        human_messages.append(HumanMessage(content=f"Hey! I am human! Index: {2*i+1}"))
+    history.add_messages(ai_messages)
+    history.add_messages(human_messages)
 
     # wait for eventual consistency
     time.sleep(5)
