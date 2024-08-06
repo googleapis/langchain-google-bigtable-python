@@ -100,52 +100,11 @@ def test_bigtable_loads_of_messages(
         instance_id, table_id, session_id, client=client
     )
 
-    def add_ai_message(history, i):
-        for _ in range(1):
-            try:
-                history.add_ai_message(f"Hey! I am AI! Index: {2*i}")
-                break
-            except Exception as e:
-                print("ron test 1")
-                print(e)
-                print(e.__cause__)
-                traceback.print_exc()
-                traceback.print_exception(e)
-                time.sleep(1)
-
-    def add_user_message(history, i):
-        for _ in range(1):
-            try:
-                history.add_user_message(f"Hey! I am human! Index: {2*i+1}")
-                break
-            except Exception as e:
-                print("ron test 2")
-                print(e)
-                print(e.__cause__)
-                traceback.print_exc()
-                traceback.print_exception(e)
-                time.sleep(1)
-
-    proc = []
+    messages = []
     for i in range(NUM_MESSAGES):
-        proc.append(
-            Process(
-                target=lambda i: add_ai_message(history, i),
-                args=[i],
-            )
-        )
-        proc.append(
-            Process(
-                target=lambda i: add_user_message(history, i),
-                args=[i],
-            )
-        )
-
-    for p in proc:
-        p.start()
-
-    for p in proc:
-        p.join()
+        messages.append(AIMessage(content=f"Hey! I am AI! Index: {2*i}"))
+        messages.append(HumanMessage(content=f"Hey! I am human! Index: {2*i+1}"))
+    history.add_messages(messages)
 
     # wait for eventual consistency
     time.sleep(5)
