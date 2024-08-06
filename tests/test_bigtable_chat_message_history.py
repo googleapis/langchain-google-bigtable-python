@@ -108,7 +108,7 @@ def test_bigtable_loads_of_messages(
             except Exception as e:
                 print(e)
                 traceback.print_exc()
-                logging.exception("An exception was thrown!")
+                traceback.print_exception(e)
                 time.sleep(1)
 
     def add_user_message(history, i):
@@ -119,7 +119,7 @@ def test_bigtable_loads_of_messages(
             except Exception as e:
                 print(e)
                 traceback.print_exc()
-                logging.exception("An exception was thrown!")
+                traceback.print_exception(e)
                 time.sleep(1)
 
     proc = []
