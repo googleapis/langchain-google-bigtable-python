@@ -19,7 +19,6 @@ import re
 import string
 import time
 import uuid
-from multiprocessing import Process
 from typing import Iterator
 
 import pytest
@@ -98,38 +97,13 @@ def test_bigtable_loads_of_messages(
         instance_id, table_id, session_id, client=client
     )
 
-    def add_ai_message(history, i):
-        try:
-            history.add_ai_message(f"Hey! I am AI! Index: {2*i}")
-        except Exception as e:
-            print(e)
-
-    def add_user_message(history, i):
-        try:
-            history.add_user_message(f"Hey! I am human! Index: {2*i+1}")
-        except Exception as e:
-            print(e)
-
-    proc = []
+    ai_messages = []
+    human_messages = []
     for i in range(NUM_MESSAGES):
-        proc.append(
-            Process(
-                target=lambda i: add_ai_message(history, i),
-                args=[i],
-            )
-        )
-        proc.append(
-            Process(
-                target=lambda i: add_user_message(history, i),
-                args=[i],
-            )
-        )
-
-    for p in proc:
-        p.start()
-
-    for p in proc:
-        p.join()
+        ai_messages.append(AIMessage(content=f"Hey! I am AI! Index: {2*i}"))
+        human_messages.append(HumanMessage(content=f"Hey! I am human! Index: {2*i+1}"))
+    history.add_messages(ai_messages)
+    history.add_messages(human_messages)
 
     # wait for eventual consistency
     time.sleep(5)

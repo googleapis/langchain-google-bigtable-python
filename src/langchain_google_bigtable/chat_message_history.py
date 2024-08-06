@@ -19,9 +19,10 @@ import json
 import re
 import time
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from google.cloud import bigtable  # type: ignore
+from google.cloud.bigtable.row import DirectRow
 from google.cloud.bigtable.row_filters import RowKeyRegexFilter  # type: ignore
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict
@@ -102,9 +103,25 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         )
         return messages
 
+    def add_messages(self, messages: Sequence[BaseMessage]) -> None:
+        """Write messages to the table"""
+        batcher = self.table_client.mutations_batcher()
+        for message in messages:
+            row = self.__message_to_row(message)
+            batcher.mutate(row)
+        batcher.flush()
+
     def add_message(self, message: BaseMessage) -> None:
         """Write a message to the table"""
+        row = self.__message_to_row(message)
+        row.commit()
 
+    def clear(self) -> None:
+        """Clear session memory from DB"""
+        row_key_prefix = self.session_id
+        self.table_client.drop_by_prefix(row_key_prefix)
+
+    def __message_to_row(self, message: BaseMessage) -> DirectRow:
         row_key = str.encode(
             self.session_id
             + "#"
@@ -115,9 +132,4 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         row = self.table_client.direct_row(row_key)
         value = str.encode(message.json())
         row.set_cell(COLUMN_FAMILY, COLUMN_NAME, value)
-        row.commit()
-
-    def clear(self) -> None:
-        """Clear session memory from DB"""
-        row_key_prefix = self.session_id
-        self.table_client.drop_by_prefix(row_key_prefix)
+        return row
