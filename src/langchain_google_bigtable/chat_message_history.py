@@ -38,6 +38,12 @@ def create_chat_history_table(
     table_id: str,
     client: Optional[bigtable.Client] = None,
 ) -> None:
+    """Create a table to store chat history.
+    Args:
+        instance_id: The Bigtable instance to use for chat message history.
+        table_id: The Bigtable table to use for chat message history.
+        client : Optional. The pre-created client to query bigtable.
+    """
     table_client = (
         use_client_or_default(client, "chat_history")
         .instance(instance_id)
