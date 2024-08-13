@@ -18,7 +18,7 @@ import struct
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Iterator, List, Optional, Dict
+from typing import Any, Callable, Dict, Iterator, List, Optional
 
 from google.cloud import bigtable  # type: ignore
 from langchain_community.document_loaders.base import BaseLoader

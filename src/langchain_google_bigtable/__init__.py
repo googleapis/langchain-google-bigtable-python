@@ -16,10 +16,10 @@
 from .chat_message_history import BigtableChatMessageHistory, create_chat_history_table
 from .loader import (
     BigtableLoader,
-    init_document_table,
     BigtableSaver,
     Encoding,
     MetadataMapping,
+    init_document_table,
 )
 from .version import __version__
 

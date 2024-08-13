@@ -20,10 +20,10 @@ import time
 from typing import Iterator
 
 import pytest
+from google.api_core.exceptions import AlreadyExists
 from google.cloud import bigtable  # type: ignore
 from google.cloud.bigtable import column_family, row_filters  # type: ignore
 from langchain_core.documents import Document
-from google.api_core.exceptions import AlreadyExists
 
 from langchain_google_bigtable.loader import (
     BigtableLoader,
