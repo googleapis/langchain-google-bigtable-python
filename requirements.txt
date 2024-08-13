@@ -1,4 +1,4 @@
-langchain-core==0.2.28
-langchain-community==0.2.11
-google-cloud-bigtable==2.25.0
+langchain-core==0.2.30
+langchain-community==0.2.12
+google-cloud-bigtable==2.26.0
 deprecated==1.2.14
