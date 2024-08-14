@@ -21,7 +21,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, Iterator, List, Optional
 
 from google.cloud import bigtable  # type: ignore
-from langchain_community.document_loaders.base import BaseLoader
+from langchain_core.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
 from .common import use_client_or_default

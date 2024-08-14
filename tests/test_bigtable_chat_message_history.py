@@ -27,7 +27,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from langchain_google_bigtable.chat_message_history import (
     BigtableChatMessageHistory,
-    create_chat_history_table,
+    init_chat_history_table,
 )
 
 TABLE_ID_PREFIX = "test-table-history-"
@@ -51,7 +51,7 @@ def table_id(instance_id: str, client: bigtable.Client) -> Iterator[str]:
         random.choice(string.ascii_lowercase) for _ in range(10)
     )
     # Create table and column family
-    create_chat_history_table(instance_id=instance_id, table_id=table_id, client=client)
+    init_chat_history_table(instance_id=instance_id, table_id=table_id, client=client)
 
     yield table_id
 
