@@ -18,7 +18,7 @@ import struct
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Iterator, List, Optional
+from typing import Any, Callable, Dict, Iterator, List, Optional
 
 from google.cloud import bigtable  # type: ignore
 from langchain_core.document_loaders.base import BaseLoader
@@ -224,6 +224,36 @@ class BigtableLoader(BaseLoader):
             return mapping.custom_decoding_func(value)
         else:
             raise ValueError(f"Invalid encoding {mapping.encoding}")
+
+
+def init_document_table(
+    instance_id: str,
+    table_id: str,
+    client: Optional[bigtable.Client] = None,
+    content_column_family: str = COLUMN_FAMILY,
+    metadata_mappings: List[MetadataMapping] = [],
+    metadata_as_json_column_family: Optional[str] = None,
+) -> None:
+    """
+    Create a table for saving of langchain documents.
+    If table already exists, a google.api_core.exceptions.AlreadyExists error is thrown.
+    """
+    table_client = (
+        use_client_or_default(client, "document_saver")
+        .instance(instance_id)
+        .table(table_id)
+    )
+
+    families: Dict[str, bigtable.column_family.gc_rule] = dict()
+    if content_column_family:
+        families[content_column_family] = bigtable.column_family.MaxVersionsGCRule(1)
+    if metadata_as_json_column_family:
+        families[metadata_as_json_column_family] = (
+            bigtable.column_family.MaxVersionsGCRule(1)
+        )
+    for mapping in metadata_mappings:
+        families[mapping.column_family] = bigtable.column_family.MaxVersionsGCRule(1)
+    table_client.create(column_families=families)
 
 
 class BigtableSaver:

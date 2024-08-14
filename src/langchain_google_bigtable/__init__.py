@@ -18,12 +18,19 @@ from .chat_message_history import (
     create_chat_history_table,
     init_chat_history_table,
 )
-from .loader import BigtableLoader, BigtableSaver, Encoding, MetadataMapping
+from .loader import (
+    BigtableLoader,
+    BigtableSaver,
+    Encoding,
+    MetadataMapping,
+    init_document_table,
+)
 from .version import __version__
 
 __all__ = [
     "BigtableChatMessageHistory",
     "create_chat_history_table",
+    "init_document_table",
     "init_chat_history_table",
     "BigtableLoader",
     "BigtableSaver",
