@@ -1,3 +1,2 @@
 langchain-core==0.2.30
-langchain-community==0.2.12
 google-cloud-bigtable==2.26.0
