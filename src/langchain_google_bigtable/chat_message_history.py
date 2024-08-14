@@ -21,6 +21,7 @@ import time
 import uuid
 from typing import List, Optional, Sequence
 
+from deprecated import deprecated
 from google.cloud import bigtable  # type: ignore
 from google.cloud.bigtable.row import DirectRow
 from google.cloud.bigtable.row_filters import RowKeyRegexFilter  # type: ignore
@@ -33,11 +34,17 @@ COLUMN_FAMILY = "langchain"
 COLUMN_NAME = "history"
 
 
-def create_chat_history_table(
+def init_chat_history_table(
     instance_id: str,
     table_id: str,
     client: Optional[bigtable.Client] = None,
 ) -> None:
+    """Create a table to store chat history.
+    Args:
+        instance_id: The Bigtable instance to use for chat message history.
+        table_id: The Bigtable table to use for chat message history.
+        client : Optional. The pre-created client to query bigtable.
+    """
     table_client = (
         use_client_or_default(client, "chat_history")
         .instance(instance_id)
@@ -51,6 +58,15 @@ def create_chat_history_table(
         table_client.column_family(
             COLUMN_FAMILY, gc_rule=bigtable.column_family.MaxVersionsGCRule(1)
         ).create()
+
+
+@deprecated(reason="Use init_chat_history_table")
+def create_chat_history_table(
+    instance_id: str,
+    table_id: str,
+    client: Optional[bigtable.Client] = None,
+) -> None:
+    init_chat_history_table(instance_id, table_id, client)
 
 
 class BigtableChatMessageHistory(BaseChatMessageHistory):
