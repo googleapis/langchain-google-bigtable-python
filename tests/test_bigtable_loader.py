@@ -668,15 +668,17 @@ def test_bigtable_metadata_as_json_execution_order(
     }
 
 
-def test_table_creation(instance_id: str, client: bigtable.Client) -> None:
-    table_id = TABLE_ID_PREFIX + "".join(
-        random.choice(string.ascii_lowercase) for _ in range(10)
-    )
+def test_table_creation(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    # Cleanup default table created by test framework.
+    table_client = client.instance(instance_id).table(table_id)
+    table_client.delete()
+
     # Create table.
     init_document_table(instance_id, table_id, client)
 
     # Assert table exists.
-    table_client = client.instance(instance_id).table(table_id)
     assert table_client.exists()
     assert sorted(table_client.list_column_families().keys()) == ["langchain"]
     # Expect second creation to fail.
