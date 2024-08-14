@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.3.0...v0.3.1) (2024-08-14)
+
+
+### Documentation
+
+* Update playbook to explain tests quota issue ([#90](https://github.com/googleapis/langchain-google-bigtable-python/issues/90)) ([8f10fe1](https://github.com/googleapis/langchain-google-bigtable-python/commit/8f10fe184056fb2cb6c4f4a11f46160e0e0b83b2))
+
 ## [0.3.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.2.3...v0.3.0) (2024-08-14)
 
 
