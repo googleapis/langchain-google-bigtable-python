@@ -153,6 +153,7 @@ class BigtableLoader(BaseLoader):
         self.metadata_as_json_encoding = metadata_as_json_encoding
 
     def load(self) -> List[Document]:
+        """Load data into Document objects."""
         return list(self.lazy_load())
 
     def lazy_load(
@@ -338,6 +339,13 @@ class BigtableSaver:
         self.metadata_as_json_encoding = metadata_as_json_encoding
 
     def add_documents(self, docs: List[Document]) -> None:
+        """
+        Save documents in the DocumentSaver table. Document's metadata is added to columns if found or
+        stored in langchain_metadata JSON column.
+
+        Args:
+            docs (List[langchain_core.documents.Document]): a list of documents to be saved.
+        """
         batcher = self.client.mutations_batcher()
         for doc in docs:
             row_key = doc.metadata.get(ID_METADATA_KEY) or uuid.uuid4().hex
@@ -370,6 +378,13 @@ class BigtableSaver:
         batcher.flush()
 
     def delete(self, docs: List[Document]) -> None:
+        """
+        Delete all instances of a document from the DocumentSaver table by matching the entire Document
+        object.
+
+        Args:
+            docs (List[langchain_core.documents.Document]): a list of documents to be deleted.
+        """
         batcher = self.client.mutations_batcher()
         for doc in docs:
             row = self.client.direct_row(doc.metadata.get(ID_METADATA_KEY))
