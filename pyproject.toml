@@ -38,7 +38,7 @@ Changelog = "https://github.com/googleapis/langchain-google-bigtable-python/blob
 test = [
     "black[jupyter]==24.8.0",
     "isort==5.13.2",
-    "mypy==1.11.1",
+    "mypy==1.11.2",
     "pytest-asyncio==0.24.0",
     "pytest==8.3.2",
     "pytest-cov==5.0.0"
