@@ -27,7 +27,6 @@ branchProtectionRules:
     requiredStatusCheckContexts:
       - "cla/google"
       - "lint"
-      - "integration-test-pr-py38 (langchain-bigtable-testing)"
       - "integration-test-pr-py39 (langchain-bigtable-testing)"
       - "integration-test-pr-py310 (langchain-bigtable-testing)"
       - "integration-test-pr-py311 (langchain-bigtable-testing)"
