@@ -41,8 +41,8 @@ These tests are registered as required tests in `.github/sync-repo-settings.yaml
 Cloud Build triggers (for Python versions 3.8 to 3.11) were created with the following specs:
 
 ```YAML
-name: integration-test-pr-py38
-description: Run integration tests on PR for Python 3.8
+name: integration-test-pr-py39
+description: Run integration tests on PR for Python 3.9
 filename: integration.cloudbuild.yaml
 github:
   name: langchain-google-bigtable-python
@@ -56,7 +56,7 @@ ignoredFiles:
   - .github/**
   - "*.md"
 substitutions:
-  _VERSION: "3.8"
+  _VERSION: "3.9"
 ```
 
 Use `gcloud builds triggers import --source=trigger.yaml` to create triggers via the command line
