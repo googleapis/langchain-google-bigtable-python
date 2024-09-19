@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.3.1...v0.4.0) (2024-09-19)
+
+
+### Features
+
+* Remove support for Python 3.8 ([#108](https://github.com/googleapis/langchain-google-bigtable-python/issues/108)) ([3b58a01](https://github.com/googleapis/langchain-google-bigtable-python/commit/3b58a01b14813f6a3b7d8fcf83bc2edec7b1be42))
+
 ## [0.3.1](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.3.0...v0.3.1) (2024-08-14)
 
 
