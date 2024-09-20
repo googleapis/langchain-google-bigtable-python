@@ -17,8 +17,8 @@ import os
 import random
 import re
 import string
+import time
 import uuid
-from multiprocessing import Process
 from typing import Iterator
 
 import pytest
@@ -27,10 +27,10 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from langchain_google_bigtable.chat_message_history import (
     BigtableChatMessageHistory,
-    create_chat_history_table,
+    init_chat_history_table,
 )
 
-TABLE_ID_PREFIX = "test-table-"
+TABLE_ID_PREFIX = "test-table-history-"
 
 
 @pytest.fixture
@@ -51,7 +51,7 @@ def table_id(instance_id: str, client: bigtable.Client) -> Iterator[str]:
         random.choice(string.ascii_lowercase) for _ in range(10)
     )
     # Create table and column family
-    create_chat_history_table(instance_id=instance_id, table_id=table_id, client=client)
+    init_chat_history_table(instance_id=instance_id, table_id=table_id, client=client)
 
     yield table_id
 
@@ -97,25 +97,16 @@ def test_bigtable_loads_of_messages(
         instance_id, table_id, session_id, client=client
     )
 
-    proc = []
+    ai_messages = []
+    human_messages = []
     for i in range(NUM_MESSAGES):
-        p = Process(
-            target=lambda i: history.add_ai_message(f"Hey! I am AI! Index: {2*i}"),
-            args=[i],
-        )
-        p.start()
-        proc.append(p)
-        p = Process(
-            target=lambda i: history.add_user_message(
-                f"Hey! I am human! Index: {2*i+1}"
-            ),
-            args=[i],
-        )
-        p.start()
-        proc.append(p)
+        ai_messages.append(AIMessage(content=f"Hey! I am AI! Index: {2*i}"))
+        human_messages.append(HumanMessage(content=f"Hey! I am human! Index: {2*i+1}"))
+    history.add_messages(ai_messages)
+    history.add_messages(human_messages)
 
-    for p in proc:
-        p.join()
+    # wait for eventual consistency
+    time.sleep(5)
 
     messages = history.messages
 

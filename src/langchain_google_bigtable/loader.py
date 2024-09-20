@@ -18,10 +18,10 @@ import struct
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Iterator, List, Optional
+from typing import Any, Callable, Dict, Iterator, List, Optional
 
 from google.cloud import bigtable  # type: ignore
-from langchain_community.document_loaders.base import BaseLoader
+from langchain_core.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
 from .common import use_client_or_default
@@ -81,7 +81,7 @@ class BigtableLoader(BaseLoader):
         metadata_as_json_column_family: Optional[str] = None,
         metadata_as_json_column_name: Optional[str] = None,
         metadata_as_json_encoding: Encoding = Encoding.UTF8,
-    ):
+    ) -> None:
         """Initialize Bigtable document loader.
 
         Args:
@@ -153,6 +153,7 @@ class BigtableLoader(BaseLoader):
         self.metadata_as_json_encoding = metadata_as_json_encoding
 
     def load(self) -> List[Document]:
+        """Load data into Document objects."""
         return list(self.lazy_load())
 
     def lazy_load(
@@ -225,6 +226,36 @@ class BigtableLoader(BaseLoader):
             raise ValueError(f"Invalid encoding {mapping.encoding}")
 
 
+def init_document_table(
+    instance_id: str,
+    table_id: str,
+    client: Optional[bigtable.Client] = None,
+    content_column_family: str = COLUMN_FAMILY,
+    metadata_mappings: List[MetadataMapping] = [],
+    metadata_as_json_column_family: Optional[str] = None,
+) -> None:
+    """
+    Create a table for saving of langchain documents.
+    If table already exists, a google.api_core.exceptions.AlreadyExists error is thrown.
+    """
+    table_client = (
+        use_client_or_default(client, "document_saver")
+        .instance(instance_id)
+        .table(table_id)
+    )
+
+    families: Dict[str, bigtable.column_family.gc_rule] = dict()
+    if content_column_family:
+        families[content_column_family] = bigtable.column_family.MaxVersionsGCRule(1)
+    if metadata_as_json_column_family:
+        families[metadata_as_json_column_family] = (
+            bigtable.column_family.MaxVersionsGCRule(1)
+        )
+    for mapping in metadata_mappings:
+        families[mapping.column_family] = bigtable.column_family.MaxVersionsGCRule(1)
+    table_client.create(column_families=families)
+
+
 class BigtableSaver:
     """Load from the Google Cloud Platform `Bigtable`."""
 
@@ -240,7 +271,7 @@ class BigtableSaver:
         metadata_as_json_column_family: Optional[str] = None,
         metadata_as_json_column_name: Optional[str] = None,
         metadata_as_json_encoding: Encoding = Encoding.UTF8,
-    ):
+    ) -> None:
         """Initialize Bigtable document saver.
 
         Args:
@@ -307,7 +338,14 @@ class BigtableSaver:
         self.metadata_as_json_column_name = metadata_as_json_column_name
         self.metadata_as_json_encoding = metadata_as_json_encoding
 
-    def add_documents(self, docs: List[Document]):
+    def add_documents(self, docs: List[Document]) -> None:
+        """
+        Save documents in the DocumentSaver table. Document's metadata is added to columns if found or
+        stored in langchain_metadata JSON column.
+
+        Args:
+            docs (List[langchain_core.documents.Document]): a list of documents to be saved.
+        """
         batcher = self.client.mutations_batcher()
         for doc in docs:
             row_key = doc.metadata.get(ID_METADATA_KEY) or uuid.uuid4().hex
@@ -339,7 +377,14 @@ class BigtableSaver:
             batcher.mutate(row)
         batcher.flush()
 
-    def delete(self, docs: List[Document]):
+    def delete(self, docs: List[Document]) -> None:
+        """
+        Delete all instances of a document from the DocumentSaver table by matching the entire Document
+        object.
+
+        Args:
+            docs (List[langchain_core.documents.Document]): a list of documents to be deleted.
+        """
         batcher = self.client.mutations_batcher()
         for doc in docs:
             row = self.client.direct_row(doc.metadata.get(ID_METADATA_KEY))

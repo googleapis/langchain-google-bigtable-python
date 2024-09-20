@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.4.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.3.1...v0.4.0) (2024-09-19)
+
+
+### Features
+
+* Remove support for Python 3.8 ([#108](https://github.com/googleapis/langchain-google-bigtable-python/issues/108)) ([3b58a01](https://github.com/googleapis/langchain-google-bigtable-python/commit/3b58a01b14813f6a3b7d8fcf83bc2edec7b1be42))
+
+## [0.3.1](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.3.0...v0.3.1) (2024-08-14)
+
+
+### Documentation
+
+* Update playbook to explain tests quota issue ([#90](https://github.com/googleapis/langchain-google-bigtable-python/issues/90)) ([8f10fe1](https://github.com/googleapis/langchain-google-bigtable-python/commit/8f10fe184056fb2cb6c4f4a11f46160e0e0b83b2))
+
+## [0.3.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.2.3...v0.3.0) (2024-08-14)
+
+
+### Features
+
+* Add comments to all exported functions ([#83](https://github.com/googleapis/langchain-google-bigtable-python/issues/83)) ([17f8f52](https://github.com/googleapis/langchain-google-bigtable-python/commit/17f8f52ad15b0ae156fdfdfa31c6d5a684e812c7))
+* Add init_chat_history_table function ([#86](https://github.com/googleapis/langchain-google-bigtable-python/issues/86)) ([d68d173](https://github.com/googleapis/langchain-google-bigtable-python/commit/d68d17329625401b4ba51a793a4ce4d00ea097c9))
+* **bigtable:** Add init_document_table function ([#87](https://github.com/googleapis/langchain-google-bigtable-python/issues/87)) ([e114de0](https://github.com/googleapis/langchain-google-bigtable-python/commit/e114de0c4ab0f28ed4c36f008ab6c39149861fb5))
+* Remove dependency on langchain-community ([#82](https://github.com/googleapis/langchain-google-bigtable-python/issues/82)) ([5d3d509](https://github.com/googleapis/langchain-google-bigtable-python/commit/5d3d50963ebfcac7c268e086b7e943bc738ad5e0))
+* Updated docs for recently added features ([#88](https://github.com/googleapis/langchain-google-bigtable-python/issues/88)) ([83495de](https://github.com/googleapis/langchain-google-bigtable-python/commit/83495decc4ea85a4f57563e8bc8d3c12f029e22e))
+
+
+### Documentation
+
+* Update README.rst ([#81](https://github.com/googleapis/langchain-google-bigtable-python/issues/81)) ([bc588b8](https://github.com/googleapis/langchain-google-bigtable-python/commit/bc588b8c041a6efdd8b9903ec6f0d0255195e402))
+
+## [0.2.3](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.2.2...v0.2.3) (2024-07-30)
+
+
+### Bug Fixes
+
+* Add return type annotation where missing ([#73](https://github.com/googleapis/langchain-google-bigtable-python/issues/73)) ([f4fbd26](https://github.com/googleapis/langchain-google-bigtable-python/commit/f4fbd26a8c25b1a4dd35a2d859ac917b40c9526c))
+* Fixed issue with messages history tests ([#76](https://github.com/googleapis/langchain-google-bigtable-python/issues/76)) ([bcb95d7](https://github.com/googleapis/langchain-google-bigtable-python/commit/bcb95d7dde47e29d42421388f207dc80f897214d))
+
+## [0.2.2](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.2.1...v0.2.2) (2024-06-25)
+
+
+### Bug Fixes
+
+* Increase delay in test ([#60](https://github.com/googleapis/langchain-google-bigtable-python/issues/60)) ([f3ac73a](https://github.com/googleapis/langchain-google-bigtable-python/commit/f3ac73a1e55b7387997334129a2a8e8661e7cc9a))
+
+## [0.2.1](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.2.0...v0.2.1) (2024-05-01)
+
+
+### Documentation
+
+* Add API reference docs ([#47](https://github.com/googleapis/langchain-google-bigtable-python/issues/47)) ([cc68cc6](https://github.com/googleapis/langchain-google-bigtable-python/commit/cc68cc6dd8ff5778ee85cef88e659bd5db586376))
+
 ## [0.2.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.1.0...v0.2.0) (2024-03-25)
 
 

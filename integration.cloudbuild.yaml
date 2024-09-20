@@ -25,14 +25,14 @@ steps:
 
   - id: Run integration tests
     name: python:${_VERSION}
+    args: ["-m", "pytest", "--cov=langchain_google_bigtable", "--cov-config=.coveragerc", "tests/"]
     entrypoint: python
-    args: ["-m", "pytest"]
     env:
       - "PROJECT_ID=$PROJECT_ID"
       - "INSTANCE_ID=test-instance"
 
 substitutions:
-  _VERSION: "3.8"
+  _VERSION: "3.9"
 
 options:
   dynamicSubstitutions: true

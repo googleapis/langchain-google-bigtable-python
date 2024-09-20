@@ -19,9 +19,11 @@ import json
 import re
 import time
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
+from deprecated import deprecated
 from google.cloud import bigtable  # type: ignore
+from google.cloud.bigtable.row import DirectRow
 from google.cloud.bigtable.row_filters import RowKeyRegexFilter  # type: ignore
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict
@@ -32,11 +34,17 @@ COLUMN_FAMILY = "langchain"
 COLUMN_NAME = "history"
 
 
-def create_chat_history_table(
+def init_chat_history_table(
     instance_id: str,
     table_id: str,
     client: Optional[bigtable.Client] = None,
-):
+) -> None:
+    """Create a table to store chat history.
+    Args:
+        instance_id: The Bigtable instance to use for chat message history.
+        table_id: The Bigtable table to use for chat message history.
+        client : Optional. The pre-created client to query bigtable.
+    """
     table_client = (
         use_client_or_default(client, "chat_history")
         .instance(instance_id)
@@ -50,6 +58,15 @@ def create_chat_history_table(
         table_client.column_family(
             COLUMN_FAMILY, gc_rule=bigtable.column_family.MaxVersionsGCRule(1)
         ).create()
+
+
+@deprecated(reason="Use init_chat_history_table")
+def create_chat_history_table(
+    instance_id: str,
+    table_id: str,
+    client: Optional[bigtable.Client] = None,
+) -> None:
+    init_chat_history_table(instance_id, table_id, client)
 
 
 class BigtableChatMessageHistory(BaseChatMessageHistory):
@@ -102,9 +119,25 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         )
         return messages
 
+    def add_messages(self, messages: Sequence[BaseMessage]) -> None:
+        """Write messages to the table"""
+        batcher = self.table_client.mutations_batcher()
+        for message in messages:
+            row = self.__message_to_row(message)
+            batcher.mutate(row)
+        batcher.flush()
+
     def add_message(self, message: BaseMessage) -> None:
         """Write a message to the table"""
+        row = self.__message_to_row(message)
+        row.commit()
 
+    def clear(self) -> None:
+        """Clear session memory from DB"""
+        row_key_prefix = self.session_id
+        self.table_client.drop_by_prefix(row_key_prefix)
+
+    def __message_to_row(self, message: BaseMessage) -> DirectRow:
         row_key = str.encode(
             self.session_id
             + "#"
@@ -115,9 +148,4 @@ class BigtableChatMessageHistory(BaseChatMessageHistory):
         row = self.table_client.direct_row(row_key)
         value = str.encode(message.json())
         row.set_cell(COLUMN_FAMILY, COLUMN_NAME, value)
-        row.commit()
-
-    def clear(self) -> None:
-        """Clear session memory from DB"""
-        row_key_prefix = self.session_id
-        self.table_client.drop_by_prefix(row_key_prefix)
+        return row

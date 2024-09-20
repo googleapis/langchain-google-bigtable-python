@@ -20,6 +20,7 @@ import time
 from typing import Iterator
 
 import pytest
+from google.api_core.exceptions import AlreadyExists
 from google.cloud import bigtable  # type: ignore
 from google.cloud.bigtable import column_family, row_filters  # type: ignore
 from langchain_core.documents import Document
@@ -29,9 +30,10 @@ from langchain_google_bigtable.loader import (
     BigtableSaver,
     Encoding,
     MetadataMapping,
+    init_document_table,
 )
 
-TABLE_ID_PREFIX = "test-table-"
+TABLE_ID_PREFIX = "test-table-loader-"
 
 
 @pytest.fixture
@@ -100,7 +102,7 @@ def test_bigtable_loads_of_messages(
     saver.add_documents(written_docs)
 
     # wait for eventual consistency
-    time.sleep(10)
+    time.sleep(20)
 
     returned_docs = loader.load()
 
@@ -113,7 +115,7 @@ def test_bigtable_loads_of_messages(
     saver.delete(returned_docs[:-1])
 
     # wait for eventual consistency
-    time.sleep(10)
+    time.sleep(20)
 
     returned_docs = loader.load()
     assert len(returned_docs) == 1
@@ -397,7 +399,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            content_column_family="non_existent_family",
+            content_column_family=non_existent_family,
         )
     assert str(excinfo.value).startswith(error_prefix)
     with pytest.raises(ValueError) as excinfo:
@@ -405,7 +407,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            content_column_family="non_existent_family",
+            content_column_family=non_existent_family,
         )
     assert str(excinfo.value).startswith(error_prefix)
 
@@ -415,7 +417,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            metadata_as_json_column_family="non_existent_family",
+            metadata_as_json_column_family=non_existent_family,
             metadata_as_json_column_name="not_None",
         )
     assert str(excinfo.value).startswith(error_prefix)
@@ -424,7 +426,7 @@ def test_bigtable_missing_column_family(
             instance_id,
             table_id,
             client=client,
-            metadata_as_json_column_family="non_existent_family",
+            metadata_as_json_column_family=non_existent_family,
             metadata_as_json_column_name="not_None",
         )
     assert str(excinfo.value).startswith(error_prefix)
@@ -664,6 +666,57 @@ def test_bigtable_metadata_as_json_execution_order(
         "another_key": "expected value",
         "rowkey": "SomeKey",
     }
+
+
+def test_table_creation(
+    instance_id: str, table_id: str, client: bigtable.Client
+) -> None:
+    # Cleanup default table created by test framework.
+    table_client = client.instance(instance_id).table(table_id)
+    table_client.delete()
+
+    # Create table.
+    init_document_table(instance_id, table_id, client)
+
+    # Assert table exists.
+    assert table_client.exists()
+    assert sorted(table_client.list_column_families().keys()) == ["langchain"]
+    # Expect second creation to fail.
+    with pytest.raises(AlreadyExists):
+        init_document_table(instance_id, table_id, client)
+
+    # Delete table.
+    table_client.delete()
+    assert not table_client.exists()
+
+    # Create with column families.
+    content_column_family = "content_column_family"
+    first_column_from_mapping = "first_column_from_mapping"
+    second_column_from_mapping = "second_column_from_mapping"
+    metadata_as_json_column_family = "metadata_as_json_column_family"
+    init_document_table(
+        instance_id,
+        table_id,
+        client,
+        content_column_family,
+        [
+            MetadataMapping(first_column_from_mapping, "", "", Encoding.ASCII),
+            MetadataMapping(second_column_from_mapping, "", "", Encoding.ASCII),
+        ],
+        metadata_as_json_column_family,
+    )
+    expected_families = [
+        content_column_family,
+        first_column_from_mapping,
+        second_column_from_mapping,
+        metadata_as_json_column_family,
+    ]
+
+    # Assert successful creation.
+    assert table_client.exists()
+    created_families = table_client.list_column_families().keys()
+    assert len(created_families) == len(expected_families)
+    assert sorted(created_families) == sorted(expected_families)
 
 
 def get_env_var(key: str, desc: str) -> str:
