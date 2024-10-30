@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.0...v0.4.1) (2024-10-30)
+
+
+### Bug Fixes
+
+* **deps:** Update dependency pytest-cov to v6 ([#116](https://github.com/googleapis/langchain-google-bigtable-python/issues/116)) ([c695829](https://github.com/googleapis/langchain-google-bigtable-python/commit/c69582920478f0a4ce6d847da435a905955af491))
+
 ## [0.4.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.3.1...v0.4.0) (2024-09-19)
 
 
