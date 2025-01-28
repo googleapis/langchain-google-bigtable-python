@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.2...v0.4.3) (2025-01-28)
+
+
+### Bug Fixes
+
+* **deps:** Update python-nonmajor ([#128](https://github.com/googleapis/langchain-google-bigtable-python/issues/128)) ([c837813](https://github.com/googleapis/langchain-google-bigtable-python/commit/c837813bf63d7a24bd446ba2a0942a7866b68da3))
+
 ## [0.4.2](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.1...v0.4.2) (2025-01-28)
 
 
