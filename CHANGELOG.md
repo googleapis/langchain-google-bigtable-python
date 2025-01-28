@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.1...v0.4.2) (2025-01-28)
+
+
+### Bug Fixes
+
+* **deps:** Update dependency isort to v6 ([#125](https://github.com/googleapis/langchain-google-bigtable-python/issues/125)) ([be5e250](https://github.com/googleapis/langchain-google-bigtable-python/commit/be5e2509e0540503fe5c9f687728ca5dccf54dd9))
+
 ## [0.4.1](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.0...v0.4.1) (2024-10-30)
 
 
