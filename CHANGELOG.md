@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.3...v0.4.4) (2025-01-30)
+
+
+### Bug Fixes
+
+* **deps:** Update dependency black to v25 ([#133](https://github.com/googleapis/langchain-google-bigtable-python/issues/133)) ([a91d669](https://github.com/googleapis/langchain-google-bigtable-python/commit/a91d6692a0578416544bc927726ea597061a83c9))
+
 ## [0.4.3](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.2...v0.4.3) (2025-01-28)
 
 
