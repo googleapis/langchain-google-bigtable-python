@@ -43,6 +43,7 @@
         'minor',
         'patch',
       ],
+      "commitMessageAction": "chore(deps)"
     },
   ],
 }
