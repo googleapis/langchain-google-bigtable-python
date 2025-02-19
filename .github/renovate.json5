@@ -1,7 +1,7 @@
 {
   extends: [
     'config:recommended',
-    ':semanticCommits',
+    ':semanticCommitTypeAll(chore)',
     ':ignoreUnstable',
     'group:allNonMajor',
     ':separateMajorReleases',
@@ -43,7 +43,6 @@
         'minor',
         'patch',
       ],
-      "commitMessageAction": "chore(deps)"
     },
   ],
 }
