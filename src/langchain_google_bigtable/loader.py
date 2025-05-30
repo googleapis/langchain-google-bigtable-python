@@ -244,7 +244,7 @@ def init_document_table(
         .table(table_id)
     )
 
-    families: Dict[str, bigtable.column_family.gc_rule] = dict()
+    families: Dict[str, bigtable.column_family.MaxVersionsGCRule] = dict()
     if content_column_family:
         families[content_column_family] = bigtable.column_family.MaxVersionsGCRule(1)
     if metadata_as_json_column_family:
