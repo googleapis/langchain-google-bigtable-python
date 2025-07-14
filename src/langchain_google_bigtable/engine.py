@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import asyncio
-import json
 from threading import Thread
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Sequence, Tuple
 
@@ -40,7 +39,7 @@ class BigtableEngine:
         """
         self._loop = loop
         self._thread = thread
-        self._client = client
+        self.client = client
 
     @classmethod
     def sync_initialize(cls, client: BigtableDataClientAsync) -> "BigtableEngine":
@@ -52,7 +51,7 @@ class BigtableEngine:
 
         Args:
             client: An optional pre-configured async Bigtable client. If not
-                    provided, a default one will be created.
+                    provided, a default one will be created with default client settings.
 
         Returns:
             A new, fully initialized BigtableEngine instance.

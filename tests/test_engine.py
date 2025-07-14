@@ -53,7 +53,7 @@ def test_sync_initialize():
 def test_run_as_sync(engine: BigtableEngine):
     test_value = "sync test"
 
-    result = engine.run_as_sync(simple_test_coroutine(test_value))
+    result = engine._run_as_sync(simple_test_coroutine(test_value))
 
     assert result == f"processed: {test_value}"
 
@@ -62,6 +62,6 @@ def test_run_as_sync(engine: BigtableEngine):
 async def test_run_as_async(engine: BigtableEngine):
     test_value = "async test"
 
-    result = await engine.run_as_async(simple_test_coroutine(test_value))
+    result = await engine._run_as_async(simple_test_coroutine(test_value))
 
     assert result == f"processed: {test_value}"
