@@ -11,17 +11,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import asyncio
 from threading import Thread
-from typing import Any
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Optional,
+    TypeVar,
+)
 
-from google.cloud.bigtable.data import BigtableDataClientAsync
+import google.auth
+from google.cloud.bigtable.data import BigtableDataClientAsync, TableAsync
+
+if TYPE_CHECKING:
+    import google.auth.credentials  # type: ignore
+
+T = TypeVar("T")
 
 
 class BigtableEngine:
-    """
-    Manages the client and execution context, handling the
+    """Manages the client and execution context, handling the
+
     async/sync conversion via a background event loop.
 
     This class is the core of the async/sync interoperability, providing a
@@ -29,49 +42,120 @@ class BigtableEngine:
     conserve resources.
     """
 
+    _default_loop: Optional[asyncio.AbstractEventLoop] = None
+    _default_thread: Optional[Thread] = None
+    __create_key = object()
+
     def __init__(
         self,
-        loop: asyncio.AbstractEventLoop,
-        thread: Thread,
+        key: object,
         client: BigtableDataClientAsync,
-    ):
-        """
-        Initializes the engine with a running event loop and a client.
+        loop: Optional[asyncio.AbstractEventLoop],
+        thread: Optional[Thread],
+    ) -> None:
+        """Initializes the engine with a running event loop and a client.
 
         Args:
-            loop: The asyncio event loop running in the background thread.
-            thread: The background thread hosting the event loop.
-            client: The async Bigtable data client.
+            client (BigtableDataClientAsync): The async Bigtable data client.
+            loop (Optional[asyncio.AbstractEventLoop]): The asyncio event loop
+              running in the background thread.
+            thread (Optional[Thread]): The background thread hosting the event loop.
         """
+        if key != BigtableEngine.__create_key:
+            raise Exception("Use factory method 'initialize'")
+        self._client = client
         self._loop = loop
         self._thread = thread
-        self.client = client
 
     @classmethod
-    def sync_initialize(cls, client: BigtableDataClientAsync) -> "BigtableEngine":
-        """
-        Creates a new engine instance, synchronously.
+    def __start_background_loop(cls) -> None:
+        """Creates and starts the default background loop and thread"""
+        if cls._default_loop is None or cls._default_loop.is_closed():
+            cls._default_loop = asyncio.new_event_loop()
+            cls._default_thread = Thread(
+                target=cls._default_loop.run_forever, daemon=True
+            )
+            cls._default_thread.start()
 
-        This method is the standard way to create an engine. It spins up a new
-        background thread and event loop to handle all async operations.
+    @classmethod
+    async def _create(
+        cls,
+        project_id: Optional[str] = None,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        thread: Optional[Thread] = None,
+        client: Optional[BigtableDataClientAsync] = None,
+        credentials: Optional[google.auth.credentials.Credentials] = None,
+        client_options: Optional[Any] = None,
+        **kwargs: Any,
+    ) -> BigtableEngine:
+        """Asynchronously instantiates the BigtableEngine Object"""
+        if not client:
+            client = BigtableDataClientAsync(
+                project=project_id,
+                credentials=credentials,
+                client_options=client_options,
+                **kwargs,
+            )
+        return cls(cls.__create_key, client, loop, thread)
+
+    @classmethod
+    def initialize(
+        cls,
+        project_id: Optional[str] = None,
+        credentials: Optional[google.auth.credentials.Credentials] = None,
+        client_options: Optional[Any] = None,
+        **kwargs: Any,
+    ) -> BigtableEngine:
+        """Creates a BigtableEngine instance with a background event loop and a new data client.
 
         Args:
-            client: An optional pre-configured async Bigtable client. If not
-                    provided, a default one will be created with default client settings.
+            project_id (Optional[str]): Google Cloud Project ID.
+            credentials (Optional[google.auth.credentials.Credentials]): credentials
+              to pass into the data client for this engine.
+            client_options (Optional[Any]): Client options used to set user options
+              for the client.
 
         Returns:
-            A new, fully initialized BigtableEngine instance.
+            A BigtableEngine Object
         """
-        if not client:
-            client = BigtableDataClientAsync()
-        loop = asyncio.new_event_loop()
-        thread = Thread(target=loop.run_forever, daemon=True)
-        thread.start()
-        return cls(loop, thread, client)
+        cls.__start_background_loop()
 
-    def _run_as_sync(self, coro: Any) -> Any:
-        """
-        Runs a coroutine on the background loop and waits for the result.
+        target_loop = cls._default_loop
+        target_thread = cls._default_thread
+
+        coro = cls._create(
+            project_id=project_id,
+            loop=target_loop,
+            thread=target_thread,
+            credentials=credentials,
+            client_options=client_options,
+            **kwargs,
+        )
+        future = asyncio.run_coroutine_threadsafe(coro, target_loop)
+        return future.result()
+
+    @property
+    def async_client(self) -> BigtableDataClientAsync:
+        """The data client property of this class."""
+        if not self._client:
+            raise RuntimeError("Client not initialized.")
+        return self._client
+
+    async def get_async_table(
+        self,
+        instance_id: str,
+        table_id: str,
+        app_profile_id: Optional[str] = None,
+        **kwargs,
+    ) -> TableAsync:
+        """Returns the table using this class's client"""
+        return self.async_client.get_table(
+            instance_id, table_id, app_profile_id=app_profile_id, **kwargs
+        )
+
+    def _run_as_sync(self, coro: Awaitable[T]) -> T:
+        """Runs a coroutine on the background loop and waits for the result.
+
         This is the core mechanism for providing a synchronous API.
 
         Args:
@@ -80,13 +164,16 @@ class BigtableEngine:
         Returns:
             The result of the coroutine.
         """
-        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
-        return future.result()
+        if not self._loop:
+            raise Exception(
+                "Engine was not initialized with a background loop for sync methods."
+            )
+        return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
-    async def _run_as_async(self, coro: Any) -> Any:
-        """
-        Runs a coroutine on the background loop without blocking the main loop.
-        This is for calling from an existing async context.
+    async def _run_as_async(self, coro: Awaitable[T]) -> T:
+        """Runs a coroutine on the background loop without blocking the main loop.
+
+        This is used for calling from an existing asynchronous context.
 
         Args:
             coro: The coroutine to execute.
@@ -94,5 +181,46 @@ class BigtableEngine:
         Returns:
             An awaitable future that resolves with the result of the coroutine.
         """
-        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
-        return await asyncio.wrap_future(future)
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, self._loop)
+        )
+
+    async def close(self) -> None:
+        """Closes the underlying client for this specific engine instance."""
+        if self._client:
+            close_coro = self._client.close()
+            if self._loop and self._loop.is_running():
+                # Runs the close operation on the loop associated with this engine
+                future = asyncio.run_coroutine_threadsafe(close_coro, self._loop)
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception as e:
+                    raise e
+            else:
+                # Fallback if loop is not running
+                try:
+                    await close_coro
+                except Exception as e:
+                    raise e
+            self._client = None  # type: ignore
+
+    @classmethod
+    async def shutdown_default_loop(cls) -> None:
+        """Stops the default class-level shared loop and thread"""
+        loop = cls._default_loop
+        thread = cls._default_thread
+
+        # Clear class references
+        cls._default_loop = None
+        cls._default_thread = None
+
+        if loop and loop.is_running():
+            loop.call_soon_threadsafe(loop.stop)
+        if thread:
+            try:
+                thread.join(timeout=10.0)
+            finally:
+                if thread.is_alive():
+                    raise Exception(
+                        "Warning: BigtableEngine default thread did not terminate."
+                    )
