@@ -18,7 +18,6 @@ from threading import Thread
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
     Optional,
     TypeVar,
 )
@@ -28,8 +27,6 @@ from google.cloud.bigtable.data import BigtableDataClientAsync, TableAsync
 
 if TYPE_CHECKING:
     import google.auth.credentials  # type: ignore
-
-T = TypeVar("T")
 
 
 class BigtableEngine:
@@ -49,13 +46,14 @@ class BigtableEngine:
     def __init__(
         self,
         key: object,
-        client: BigtableDataClientAsync,
+        client: Optional[BigtableDataClientAsync],
         loop: Optional[asyncio.AbstractEventLoop],
         thread: Optional[Thread],
     ) -> None:
         """Initializes the engine with a running event loop and a client.
 
         Args:
+            key (object): object to prevent direct constructor usage.
             client (BigtableDataClientAsync): The async Bigtable data client.
             loop (Optional[asyncio.AbstractEventLoop]): The asyncio event loop
               running in the background thread.
@@ -118,10 +116,11 @@ class BigtableEngine:
         Returns:
             A BigtableEngine Object
         """
+
         cls.__start_background_loop()
 
-        target_loop = cls._default_loop
-        target_thread = cls._default_thread
+        target_loop: asyncio.AbstractEventLoop = cls._default_loop  # type: ignore
+        target_thread: Thread = cls._default_thread  # type: ignore
 
         coro = cls._create(
             project_id=project_id,
@@ -146,14 +145,14 @@ class BigtableEngine:
         instance_id: str,
         table_id: str,
         app_profile_id: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> TableAsync:
         """Returns the table using this class's client"""
         return self.async_client.get_table(
             instance_id, table_id, app_profile_id=app_profile_id, **kwargs
         )
 
-    def _run_as_sync(self, coro: Awaitable[T]) -> T:
+    def _run_as_sync(self, coro: Any) -> Any:
         """Runs a coroutine on the background loop and waits for the result.
 
         This is the core mechanism for providing a synchronous API.
@@ -170,7 +169,7 @@ class BigtableEngine:
             )
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
-    async def _run_as_async(self, coro: Awaitable[T]) -> T:
+    async def _run_as_async(self, coro: Any) -> Any:
         """Runs a coroutine on the background loop without blocking the main loop.
 
         This is used for calling from an existing asynchronous context.
@@ -181,6 +180,9 @@ class BigtableEngine:
         Returns:
             An awaitable future that resolves with the result of the coroutine.
         """
+        if not self._loop or not self._loop.is_running():
+            return await coro
+
         return await asyncio.wrap_future(
             asyncio.run_coroutine_threadsafe(coro, self._loop)
         )

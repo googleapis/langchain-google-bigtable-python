@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import asyncio
 import functools
 import os
@@ -19,7 +20,7 @@ from typing import Any, AsyncGenerator, Iterator, Optional
 from unittest.mock import MagicMock
 
 import google.auth
-import google.auth.credentials
+import pytest
 import pytest_asyncio
 from google.api_core import exceptions
 from google.cloud import bigtable
@@ -35,7 +36,6 @@ from google.cloud.bigtable.data.mutations import (
     SetCell,
 )
 
-import pytest
 from langchain_google_bigtable.engine import BigtableEngine
 
 TEST_COLUMN_FAMILY = "cf1"
@@ -92,7 +92,7 @@ async def dynamic_table_id(
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
-async def shutdown_bigtable_engine_loop():
+async def shutdown_bigtable_engine_loop() -> Any:
     yield
     await BigtableEngine.shutdown_default_loop()
 
@@ -100,7 +100,7 @@ async def shutdown_bigtable_engine_loop():
 class TestBigtableEngine:
 
     @pytest_asyncio.fixture(scope="class")
-    async def engine(self, project_id: str):
+    async def engine(self, project_id: str) -> Any:
         credentials, _ = google.auth.default()
         engine = BigtableEngine.initialize(
             project_id=project_id, credentials=credentials
@@ -113,16 +113,17 @@ class TestBigtableEngine:
         return dynamic_table_id
 
     @pytest.mark.asyncio
-    async def test_engine_initialized(self, engine: BigtableEngine):
+    async def test_engine_initialized(self, engine: BigtableEngine) -> None:
         assert engine is not None
         assert engine.async_client is not None
         assert isinstance(engine.async_client, BigtableDataClientAsync)
+        assert engine._loop is not None
         assert engine._loop.is_running()
 
     @pytest.mark.asyncio
     async def test_get_table_success(
         self, engine: BigtableEngine, instance_id: str, table_id: str
-    ):
+    ) -> None:
         table = await engine.get_async_table(instance_id, table_id)
         assert table is not None
         assert isinstance(table, TableAsync)
@@ -131,7 +132,7 @@ class TestBigtableEngine:
     @pytest.mark.asyncio
     async def test_data_operations(
         self, engine: BigtableEngine, instance_id: str, table_id: str
-    ):
+    ) -> None:
         table = await engine.get_async_table(instance_id, table_id)
         test_row_key = TEST_ROW_PREFIX + uuid.uuid4().hex
         test_value = f"value-{uuid.uuid4().hex}"
@@ -145,7 +146,7 @@ class TestBigtableEngine:
             row_key=test_row_key, mutations=[set_cell_mutation]
         )
 
-        async def perform_write():
+        async def perform_write() -> None:
             await table.bulk_mutate_rows([row_mutation_entry])
 
         await engine._run_as_async(perform_write())
@@ -173,7 +174,7 @@ class TestBigtableEngine:
         delete_mutation = DeleteAllFromRow()
         delete_entry = RowMutationEntry(test_row_key, [delete_mutation])
 
-        async def perform_delete():
+        async def perform_delete() -> None:
             await table.bulk_mutate_rows([delete_entry])
 
         await engine._run_as_async(perform_delete())
@@ -182,7 +183,7 @@ class TestBigtableEngine:
         assert deleted_row is None
 
     @pytest.mark.asyncio
-    async def test_engine_close_behavior(self, project_id: str):
+    async def test_engine_close_behavior(self, project_id: str) -> None:
         credentials, _ = google.auth.default()
         local_engine = BigtableEngine.initialize(
             project_id=project_id, credentials=credentials
@@ -192,6 +193,6 @@ class TestBigtableEngine:
         with pytest.raises(RuntimeError, match="Client not initialized"):
             local_engine.async_client
 
-    def test_constructor_key(self):
+    def test_constructor_key(self) -> None:
         with pytest.raises(Exception, match="Use factory method 'initialize'"):
             BigtableEngine(object(), MagicMock(), None, None)
