@@ -11,75 +11,187 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import asyncio
-from threading import Thread
-from typing import Iterator
-from unittest.mock import Mock
+import functools
+import os
+import uuid
+from typing import Any, AsyncGenerator, Iterator, Optional
+from unittest.mock import MagicMock
+
+import google.auth
+import google.auth.credentials
+import pytest_asyncio
+from google.api_core import exceptions
+from google.cloud import bigtable
+from google.cloud.bigtable.data import (
+    BigtableDataClientAsync,
+    ReadRowsQuery,
+    TableAsync,
+    row_filters,
+)
+from google.cloud.bigtable.data.mutations import (
+    DeleteAllFromRow,
+    RowMutationEntry,
+    SetCell,
+)
 
 import pytest
-
 from langchain_google_bigtable.engine import BigtableEngine
 
-
-@pytest.fixture
-def engine() -> Iterator[BigtableEngine]:
-    mock_client = Mock()
-    engine_instance = BigtableEngine.sync_initialize(client=mock_client)
-
-    yield engine_instance
-
-    if engine_instance._loop.is_running():
-        engine_instance._loop.call_soon_threadsafe(engine_instance._loop.stop)
-        engine_instance._thread.join(timeout=5)
-
-    assert not engine_instance._thread.is_alive()
+TEST_COLUMN_FAMILY = "cf1"
+TEST_COLUMN = "test_col".encode("utf-8")
+TEST_ROW_PREFIX = "pytest-engine-test-"
 
 
-async def simple_test_coroutine(value: str) -> str:
-    await asyncio.sleep(0)
-    return f"processed: {value}"
+def get_env_var(key: str, desc: str) -> str:
+    v = os.environ.get(key)
+    if v is None:
+        raise ValueError(f"Must set env var {key} to: {desc}")
+    return v
 
 
-async def coroutine_that_raises() -> None:
-    await asyncio.sleep(0)
-    raise ValueError("Something went wrong inside the coroutine")
+@pytest.fixture(scope="session")
+def project_id() -> str:
+    return get_env_var("PROJECT_ID", "GCP Project ID")
 
 
-def test_sync_initialize_with_client() -> None:
-    mock_client = Mock()
-    engine_instance = BigtableEngine.sync_initialize(client=mock_client)
-
-    assert isinstance(engine_instance, BigtableEngine)
-    assert isinstance(engine_instance._loop, asyncio.AbstractEventLoop)
-    assert isinstance(engine_instance._thread, Thread)
-    assert engine_instance.client == mock_client
-    assert engine_instance._thread.is_alive()
-    assert engine_instance._loop.is_running()
-
-    engine_instance._loop.call_soon_threadsafe(engine_instance._loop.stop)
-    engine_instance._thread.join(timeout=5)
+@pytest.fixture(scope="session")
+def instance_id() -> str:
+    return get_env_var("INSTANCE_ID", "Bigtable Instance ID")
 
 
-def test_run_as_sync_success(engine: BigtableEngine) -> None:
-    test_value = "sync test"
-    result = engine._run_as_sync(simple_test_coroutine(test_value))
-    assert result == f"processed: {test_value}"
+@pytest_asyncio.fixture(scope="session")
+async def dynamic_table_id(
+    project_id: str, instance_id: str
+) -> AsyncGenerator[str, None]:
+    # Uses the admin client for table creation and deletion
+    admin_client = bigtable.Client(project=project_id, admin=True)
+    instance = admin_client.instance(instance_id)
+
+    table_id = f"test-suite-{uuid.uuid4().hex[:8]}"
+    table = instance.table(table_id)
+
+    column_families = {TEST_COLUMN_FAMILY: bigtable.column_family.MaxVersionsGCRule(1)}
+
+    loop = asyncio.get_running_loop()
+
+    try:
+        await loop.run_in_executor(
+            None, functools.partial(table.create, column_families=column_families)
+        )
+        yield table_id
+    except exceptions.Conflict:  # Already exists
+        yield table_id
+    except Exception as e:
+        pytest.fail(f"Failed to create table {table_id}: {e}")
+    finally:
+        try:
+            await loop.run_in_executor(None, table.delete)
+        except Exception as e:
+            raise e
 
 
-def test_run_as_sync_propagates_exception(engine: BigtableEngine) -> None:
-    with pytest.raises(ValueError, match="Something went wrong"):
-        engine._run_as_sync(coroutine_that_raises())
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def shutdown_bigtable_engine_loop():
+    yield
+    await BigtableEngine.shutdown_default_loop()
 
 
-@pytest.mark.asyncio
-async def test_run_as_async_success(engine: BigtableEngine) -> None:
-    test_value = "async test"
-    result = await engine._run_as_async(simple_test_coroutine(test_value))
-    assert result == f"processed: {test_value}"
+class TestBigtableEngine:
 
+    @pytest_asyncio.fixture(scope="class")
+    async def engine(self, project_id: str):
+        credentials, _ = google.auth.default()
+        engine = BigtableEngine.initialize(
+            project_id=project_id, credentials=credentials
+        )
+        yield engine
+        await engine.close()
 
-@pytest.mark.asyncio
-async def test_run_as_async_propagates_exception(engine: BigtableEngine) -> None:
-    with pytest.raises(ValueError, match="Something went wrong"):
-        await engine._run_as_async(coroutine_that_raises())
+    @pytest.fixture
+    def table_id(self, dynamic_table_id: str) -> str:
+        return dynamic_table_id
+
+    @pytest.mark.asyncio
+    async def test_engine_initialized(self, engine: BigtableEngine):
+        assert engine is not None
+        assert engine.async_client is not None
+        assert isinstance(engine.async_client, BigtableDataClientAsync)
+        assert engine._loop.is_running()
+
+    @pytest.mark.asyncio
+    async def test_get_table_success(
+        self, engine: BigtableEngine, instance_id: str, table_id: str
+    ):
+        table = await engine.get_async_table(instance_id, table_id)
+        assert table is not None
+        assert isinstance(table, TableAsync)
+        assert table.table_id == table_id
+
+    @pytest.mark.asyncio
+    async def test_data_operations(
+        self, engine: BigtableEngine, instance_id: str, table_id: str
+    ):
+        table = await engine.get_async_table(instance_id, table_id)
+        test_row_key = TEST_ROW_PREFIX + uuid.uuid4().hex
+        test_value = f"value-{uuid.uuid4().hex}"
+
+        set_cell_mutation = SetCell(
+            family=TEST_COLUMN_FAMILY,
+            qualifier=TEST_COLUMN,
+            new_value=test_value.encode("utf-8"),
+        )
+        row_mutation_entry = RowMutationEntry(
+            row_key=test_row_key, mutations=[set_cell_mutation]
+        )
+
+        async def perform_write():
+            await table.bulk_mutate_rows([row_mutation_entry])
+
+        await engine._run_as_async(perform_write())
+
+        async def perform_read():
+            query = ReadRowsQuery(
+                row_keys=[test_row_key],
+                row_filter=row_filters.CellsColumnLimitFilter(1),
+            )
+            rows = await table.read_rows(query)
+            return rows[0] if rows else None
+
+        row = await engine._run_as_async(perform_read())
+        assert row is not None, f"Row {test_row_key} not found after write"
+        cell = row.get_cells(family=TEST_COLUMN_FAMILY, qualifier=TEST_COLUMN)[0]
+        assert cell.value.decode("utf-8") == test_value
+
+        sync_row = engine._run_as_sync(perform_read())
+        assert sync_row is not None
+        sync_cell = sync_row.get_cells(
+            family=TEST_COLUMN_FAMILY, qualifier=TEST_COLUMN
+        )[0]
+        assert sync_cell.value.decode("utf-8") == test_value
+
+        delete_mutation = DeleteAllFromRow()
+        delete_entry = RowMutationEntry(test_row_key, [delete_mutation])
+
+        async def perform_delete():
+            await table.bulk_mutate_rows([delete_entry])
+
+        await engine._run_as_async(perform_delete())
+
+        deleted_row = await engine._run_as_async(perform_read())
+        assert deleted_row is None
+
+    @pytest.mark.asyncio
+    async def test_engine_close_behavior(self, project_id: str):
+        credentials, _ = google.auth.default()
+        local_engine = BigtableEngine.initialize(
+            project_id=project_id, credentials=credentials
+        )
+        await local_engine.close()
+        assert local_engine._client is None
+        with pytest.raises(RuntimeError, match="Client not initialized"):
+            local_engine.async_client
+
+    def test_constructor_key(self):
+        with pytest.raises(Exception, match="Use factory method 'initialize'"):
+            BigtableEngine(object(), MagicMock(), None, None)
