@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import Future
 from threading import Thread
 from typing import (
     TYPE_CHECKING,
@@ -66,7 +67,13 @@ class BigtableEngine:
         self._thread = thread
 
     @classmethod
-    def __start_background_loop(cls) -> None:
+    def __start_background_loop(
+        cls,
+        project_id: Optional[str],
+        credentials: Optional[google.auth.credentials.Credentials] = None,
+        client_options: Optional[Any] = None,
+        **kwargs: Any,
+    ) -> Future:
         """Creates and starts the default background loop and thread"""
         if cls._default_loop is None or cls._default_loop.is_closed():
             cls._default_loop = asyncio.new_event_loop()
@@ -74,6 +81,17 @@ class BigtableEngine:
                 target=cls._default_loop.run_forever, daemon=True
             )
             cls._default_thread.start()
+
+        coro = cls._create(
+            project_id=project_id,
+            loop=cls._default_loop,
+            thread=cls._default_thread,
+            credentials=credentials,
+            client_options=client_options,
+            **kwargs,
+        )
+
+        return asyncio.run_coroutine_threadsafe(coro, cls._default_loop)
 
     @classmethod
     async def _create(
@@ -97,14 +115,14 @@ class BigtableEngine:
         return cls(cls.__create_key, client, loop, thread)
 
     @classmethod
-    def initialize(
+    async def async_initialize(
         cls,
         project_id: Optional[str] = None,
         credentials: Optional[google.auth.credentials.Credentials] = None,
         client_options: Optional[Any] = None,
         **kwargs: Any,
     ) -> BigtableEngine:
-        """Creates a BigtableEngine instance with a background event loop and a new data client.
+        """Creates a BigtableEngine instance with a background event loop and a new data client asynchronously
 
         Args:
             project_id (Optional[str]): Google Cloud Project ID.
@@ -117,20 +135,43 @@ class BigtableEngine:
             A BigtableEngine Object
         """
 
-        cls.__start_background_loop()
-
-        target_loop: asyncio.AbstractEventLoop = cls._default_loop  # type: ignore
-        target_thread: Thread = cls._default_thread  # type: ignore
-
-        coro = cls._create(
+        future = cls.__start_background_loop(
             project_id=project_id,
-            loop=target_loop,
-            thread=target_thread,
             credentials=credentials,
             client_options=client_options,
             **kwargs,
         )
-        future = asyncio.run_coroutine_threadsafe(coro, target_loop)
+
+        return await asyncio.wrap_future(future)
+
+    @classmethod
+    def initialize(
+        cls,
+        project_id: Optional[str] = None,
+        credentials: Optional[google.auth.credentials.Credentials] = None,
+        client_options: Optional[Any] = None,
+        **kwargs: Any,
+    ) -> BigtableEngine:
+        """Creates a BigtableEngine instance with a background event loop and a new data client synchronously.
+
+        Args:
+            project_id (Optional[str]): Google Cloud Project ID.
+            credentials (Optional[google.auth.credentials.Credentials]): credentials
+              to pass into the data client for this engine.
+            client_options (Optional[Any]): Client options used to set user options
+              for the client.
+
+        Returns:
+            A BigtableEngine Object
+        """
+
+        future = cls.__start_background_loop(
+            project_id=project_id,
+            credentials=credentials,
+            client_options=client_options,
+            **kwargs,
+        )
+
         return future.result()
 
     @property
