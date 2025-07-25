@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.4...v0.5.0) (2025-07-25)
+
+
+### Features
+
+* Add BigtableEngine Class for managing the client and execution context ([#163](https://github.com/googleapis/langchain-google-bigtable-python/issues/163)) ([93a13c6](https://github.com/googleapis/langchain-google-bigtable-python/commit/93a13c659fd52b62aed0947f9e0f234dbe54f832))
+
 ## [0.4.4](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.3...v0.4.4) (2025-01-30)
 
 
