@@ -141,6 +141,7 @@ class TestBigtableEngineSyncInitialized:
         test_row_key = TEST_ROW_PREFIX + uuid.uuid4().hex
         test_value = f"value-{uuid.uuid4().hex}"
 
+        # Set up the mutations to be made for this test
         set_cell_mutation = SetCell(
             family=TEST_COLUMN_FAMILY,
             qualifier=TEST_COLUMN,
@@ -150,11 +151,14 @@ class TestBigtableEngineSyncInitialized:
             row_key=test_row_key, mutations=[set_cell_mutation]
         )
 
+        # Performs a write operation on the mutations for test_row_key row
         async def perform_write() -> None:
             await table.bulk_mutate_rows([row_mutation_entry])
 
+        # Run the write operation asynchronously using the engine and assert
         await engine._run_as_async(perform_write())
 
+        # Performs a read operation using test_row_key
         async def perform_read():
             query = ReadRowsQuery(
                 row_keys=[test_row_key],
@@ -163,11 +167,13 @@ class TestBigtableEngineSyncInitialized:
             rows = await table.read_rows(query)
             return rows[0] if rows else None
 
+        # Run the read operation asynchronously using the engine and assert
         row = await engine._run_as_async(perform_read())
         assert row is not None, f"Row {test_row_key} not found after write"
         cell = row.get_cells(family=TEST_COLUMN_FAMILY, qualifier=TEST_COLUMN)[0]
         assert cell.value.decode("utf-8") == test_value
 
+        # Run the read operation synchronously using the engine and assert
         sync_row = engine._run_as_sync(perform_read())
         assert sync_row is not None
         sync_cell = sync_row.get_cells(
@@ -175,12 +181,15 @@ class TestBigtableEngineSyncInitialized:
         )[0]
         assert sync_cell.value.decode("utf-8") == test_value
 
+        # Prepare delete mutation
         delete_mutation = DeleteAllFromRow()
         delete_entry = RowMutationEntry(test_row_key, [delete_mutation])
 
+        # Performs a delete operation
         async def perform_delete() -> None:
             await table.bulk_mutate_rows([delete_entry])
 
+        # Perform delete operation asynchronously using the engine and assert
         await engine._run_as_async(perform_delete())
 
         deleted_row = await engine._run_as_async(perform_read())
@@ -251,6 +260,7 @@ class TestBigtableEngineAsyncInitialized:
         test_row_key = TEST_ROW_PREFIX + uuid.uuid4().hex
         test_value = f"value-{uuid.uuid4().hex}"
 
+        # Set up the mutations to be made for this test
         set_cell_mutation = SetCell(
             family=TEST_COLUMN_FAMILY,
             qualifier=TEST_COLUMN,
@@ -260,11 +270,14 @@ class TestBigtableEngineAsyncInitialized:
             row_key=test_row_key, mutations=[set_cell_mutation]
         )
 
+        # Performs a write operation on the mutations for test_row_key row
         async def perform_write() -> None:
             await table.bulk_mutate_rows([row_mutation_entry])
 
+        # Run the write operation asynchronously using the engine and assert
         await engine._run_as_async(perform_write())
 
+        # Performs a read operation using test_row_key
         async def perform_read():
             query = ReadRowsQuery(
                 row_keys=[test_row_key],
@@ -273,11 +286,13 @@ class TestBigtableEngineAsyncInitialized:
             rows = await table.read_rows(query)
             return rows[0] if rows else None
 
+        # Run the read operation asynchronously using the engine and assert
         row = await engine._run_as_async(perform_read())
         assert row is not None, f"Row {test_row_key} not found after write"
         cell = row.get_cells(family=TEST_COLUMN_FAMILY, qualifier=TEST_COLUMN)[0]
         assert cell.value.decode("utf-8") == test_value
 
+        # Run the read operation synchronously using the engine and assert
         sync_row = engine._run_as_sync(perform_read())
         assert sync_row is not None
         sync_cell = sync_row.get_cells(
@@ -285,12 +300,15 @@ class TestBigtableEngineAsyncInitialized:
         )[0]
         assert sync_cell.value.decode("utf-8") == test_value
 
+        # Prepare delete mutation
         delete_mutation = DeleteAllFromRow()
         delete_entry = RowMutationEntry(test_row_key, [delete_mutation])
 
+        # Performs a delete operation
         async def perform_delete() -> None:
             await table.bulk_mutate_rows([delete_entry])
 
+        # Perform delete operation asynchronously using the engine and assert
         await engine._run_as_async(perform_delete())
 
         deleted_row = await engine._run_as_async(perform_read())
