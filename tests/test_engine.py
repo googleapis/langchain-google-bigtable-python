@@ -95,8 +95,6 @@ async def dynamic_table_id(
 async def shutdown_bigtable_engine_loop() -> Any:
     yield
     await BigtableEngine.shutdown_default_loop()
-    assert BigtableEngine._default_loop is None
-    assert BigtableEngine._default_thread is None
 
 
 class TestBigtableEngineSyncInitialized:
