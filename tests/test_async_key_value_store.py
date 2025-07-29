@@ -22,7 +22,12 @@ import pytest
 import pytest_asyncio
 from google.api_core import exceptions
 from google.cloud import bigtable
-from google.cloud.bigtable.data import BigtableDataClientAsync, TableAsync
+from google.cloud.bigtable.data import (
+    BigtableDataClientAsync,
+    FailedMutationEntryError,
+    MutationsExceptionGroup,
+    TableAsync,
+)
 
 from langchain_google_bigtable.async_key_value_store import AsyncBigtableByteStore
 
@@ -106,7 +111,9 @@ class TestAsyncBigtableByteStore:
         await async_data_client.close()
 
     @pytest_asyncio.fixture()
-    def store(self, table: TableAsync) -> AsyncGenerator[AsyncBigtableByteStore, None]:
+    async def store(
+        self, table: TableAsync
+    ) -> AsyncGenerator[AsyncBigtableByteStore, None]:
         """Fixture to create an AsyncBigtableByteStore for the tests."""
         store = AsyncBigtableByteStore(
             table, column_family=TEST_COLUMN_FAMILY, column_qualifier=TEST_COLUMN
@@ -247,13 +254,13 @@ class TestAsyncBigtableByteStore:
     async def test_invalid_key_type(self, store: AsyncBigtableByteStore) -> None:
         """Test that amset raises TypeError when a key is not a string."""
         with pytest.raises(TypeError, match="Keys must be of type 'str'."):
-            await store.amset([(123, b"value")])
+            await store.amset([(123, b"value")])  # type: ignore
 
     @pytest.mark.asyncio
     async def test_invalid_value_type(self, store: AsyncBigtableByteStore) -> None:
         """Test that amset raises TypeError when a value is not bytes."""
         with pytest.raises(TypeError, match="Values must be of type 'bytes'."):
-            await store.amset([("key", "value")])
+            await store.amset([("key", "value")])  # type: ignore
 
     @pytest.mark.asyncio
     async def test_bigtable_mutation_error(self, store: AsyncBigtableByteStore) -> None:

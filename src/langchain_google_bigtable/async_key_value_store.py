@@ -20,6 +20,8 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Union,
+    cast,
 )
 
 from google.cloud import bigtable
@@ -28,6 +30,7 @@ from google.cloud.bigtable.data import (
     ReadRowsQuery,
     RowMutationEntry,
     RowRange,
+    TableAsync,
 )
 from langchain_core.stores import BaseStore
 
@@ -51,7 +54,7 @@ class AsyncBigtableByteStore(BaseStore[str, bytes]):
 
     def __init__(
         self,
-        async_table,
+        async_table: TableAsync,
         column_family: str = DEFAULT_COLUMN_FAMILY,
         column_qualifier: bytes = DEFAULT_COLUMN_QUALIFIER,
     ):
@@ -97,7 +100,9 @@ class AsyncBigtableByteStore(BaseStore[str, bytes]):
         results = {}
         row_filter = bigtable.data.row_filters.CellsColumnLimitFilter(1)
 
-        query = bigtable.data.ReadRowsQuery(row_keys=row_keys, row_filter=row_filter)
+        query = bigtable.data.ReadRowsQuery(
+            row_keys=cast(Sequence[Union[str, bytes]], row_keys), row_filter=row_filter
+        )
         rows_read = await self.table.read_rows(query)
         for row in rows_read:
             cell = row.get_cells(

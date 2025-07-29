@@ -259,7 +259,7 @@ class BigtableEngine:
         Raises:
             Exception: If the thread does not terminate within the timeout period.
         """
-        loop = cls._default_loop
+        loop: asyncio.AbstractEventLoop = cls._default_loop
         thread = cls._default_thread
 
         # Clear class references
