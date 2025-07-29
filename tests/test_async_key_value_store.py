@@ -16,6 +16,7 @@ import functools
 import os
 import uuid
 from typing import Any, AsyncGenerator
+from unittest import mock
 
 import google.auth
 import pytest
@@ -273,7 +274,9 @@ class TestAsyncBigtableByteStore:
             # Create a dummy cause
             dummy_cause = Exception("Dummy cause")
             failed_mutation = FailedMutationEntryError(
-                failed_mutation_entry=mock_failed_mutation_entry, cause=dummy_cause
+                failed_mutation_entry=mock_failed_mutation_entry,
+                cause=dummy_cause,
+                failed_idx=0,
             )
             raise MutationsExceptionGroup(
                 [failed_mutation],
