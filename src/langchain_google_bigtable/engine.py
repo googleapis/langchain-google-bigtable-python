@@ -277,4 +277,5 @@ class BigtableEngine:
                         "Warning: BigtableEngine default thread did not terminate."
                     )
                 else:
-                    loop.close()  # Close the loop for resource cleanup.
+                    if loop:
+                        loop.close()  # Close the loop for resource cleanup.
