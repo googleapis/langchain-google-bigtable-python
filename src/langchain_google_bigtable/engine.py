@@ -249,7 +249,16 @@ class BigtableEngine:
 
     @classmethod
     async def shutdown_default_loop(cls) -> None:
-        """Stops the default class-level shared loop and thread"""
+        """
+        Closes the default class-level shared loop and terminates the thread associated with it.
+
+        Note: Calling this method will prevent any new BigtableEngine instances
+        from using the shared event loop. Additionally, after this method is called
+        it will not be possible to run more coroutines in the previous loop.
+
+        Raises:
+            Exception: If the thread does not terminate within the timeout period.
+        """
         loop = cls._default_loop
         thread = cls._default_thread
 
@@ -261,9 +270,11 @@ class BigtableEngine:
             loop.call_soon_threadsafe(loop.stop)
         if thread:
             try:
-                thread.join(timeout=10.0)
+                thread.join(timeout=20.0)
             finally:
                 if thread.is_alive():
                     raise Exception(
                         "Warning: BigtableEngine default thread did not terminate."
                     )
+                else:
+                    loop.close()  # Close the loop for resource cleanup.
