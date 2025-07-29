@@ -290,3 +290,4 @@ class TestAsyncBigtableByteStore:
 
         with pytest.raises(MutationsExceptionGroup) as exc_info:
             await store.amset([(test_key, test_value)])
+        assert "Test MutationsExceptionGroup message" in str(exc_info.value)
