@@ -69,6 +69,7 @@ async def dynamic_table_id(
     table_id = f"test-suite-{uuid.uuid4().hex[:8]}"
     table = instance.table(table_id)
 
+    # Tests will only focus on recent cells
     column_families = {
         TEST_COLUMN_FAMILY: bigtable.column_family.MaxVersionsGCRule(1),
         CUSTOM_COLUMN_FAMILY: bigtable.column_family.MaxVersionsGCRule(1),
@@ -127,7 +128,6 @@ class TestAsyncBigtableByteStore:
         test_key_1 = TEST_ROW_PREFIX + uuid.uuid4().hex
         test_key_2 = TEST_ROW_PREFIX + uuid.uuid4().hex
         test_value_1 = f"value-{uuid.uuid4().hex}".encode("utf-8")
-        print(type(test_value_1))
         test_value_2 = f"value-{uuid.uuid4().hex}".encode("utf-8")
         key_value_pairs = [(test_key_1, test_value_1), (test_key_2, test_value_2)]
 

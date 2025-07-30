@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 from typing import (
     Any,
     AsyncIterator,
@@ -89,6 +91,8 @@ class AsyncBigtableByteStore(BaseStore[str, bytes]):
         """
         Asynchronously retrieves values for a sequence of keys.
 
+        It only reads the most recent version for each key.
+
         Args:
             keys: A sequence of keys to retrieve values for.
 
@@ -103,6 +107,8 @@ class AsyncBigtableByteStore(BaseStore[str, bytes]):
         query = bigtable.data.ReadRowsQuery(
             row_keys=cast(List[Union[str, bytes]], row_keys), row_filter=row_filter
         )
+
+        # It only reads the most recent version for each row
         rows_read = await self.table.read_rows(query)
         for row in rows_read:
             cell = row.get_cells(
@@ -170,12 +176,14 @@ class AsyncBigtableByteStore(BaseStore[str, bytes]):
         """
         Asynchronously yields keys matching a given prefix.
 
+        It only yields the row keys that match the given prefix.
+
         Args:
            prefix: An optional prefix to filter keys by. If `None` or an empty
              string, all keys are yielded.
 
         Yields:
-            Keys from the Bigtable that match the prefix.
+            Keys from the table that match a given prefix.
         """
         row_filter = bigtable.data.row_filters.StripValueTransformerFilter(True)
         if not prefix or prefix == "":
