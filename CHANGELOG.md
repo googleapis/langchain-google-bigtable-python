@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.4...v0.5.0) (2025-07-31)
+
+
+### Features
+
+* Add `AsyncBigtableByteStore` Class for the async-only key value store implementation. ([#169](https://github.com/googleapis/langchain-google-bigtable-python/issues/169)) ([1b6fee9](https://github.com/googleapis/langchain-google-bigtable-python/commit/1b6fee9f7edaa4612b252765a138aa4b18b104d2))
+* Add BigtableEngine Class for managing the client and execution context ([#163](https://github.com/googleapis/langchain-google-bigtable-python/issues/163)) ([93a13c6](https://github.com/googleapis/langchain-google-bigtable-python/commit/93a13c659fd52b62aed0947f9e0f234dbe54f832))
+
 ## [0.4.4](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.4.3...v0.4.4) (2025-01-30)
 
 
