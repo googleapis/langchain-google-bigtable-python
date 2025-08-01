@@ -49,7 +49,9 @@ def instance_id() -> str:
 
 
 @pytest.fixture(scope="session")
-def managed_table(project_id: str, instance_id: str) -> tuple[str, str, List[str]]:
+def managed_table(
+    project_id: str, instance_id: str
+) -> Iterator[tuple[str, str, List[str]]]:
     """
     A fixture that creates a unique Bigtable table.
     """
@@ -100,7 +102,7 @@ class TestBigtableByteStoreSync:
     @pytest_asyncio.fixture(scope="class")
     async def sync_store(
         self, managed_table: tuple[str, str, List[str]], project_id: str
-    ) -> Iterator[BigtableByteStore]:
+    ) -> AsyncIterator[BigtableByteStore]:
         """Provides a sync store for the class, cleaning up the engine at the end."""
         instance_id, table_id, _ = managed_table
         store = BigtableByteStore.create_sync(
@@ -363,7 +365,9 @@ class TestAdvancedScenarios:
         await engine.close()
 
     @pytest.mark.asyncio
-    async def test_operating_on_non_existent_table_raises_error(self) -> None:
+    async def test_operating_on_non_existent_table_raises_error(
+        self, instance_id: str
+    ) -> None:
         """
         Verifies that attempting to use a store pointed at a table that
         does not exist raises an error, as expected.
@@ -373,7 +377,7 @@ class TestAdvancedScenarios:
             instance_id=instance_id, table_id=fake_table_id
         )
 
-        with pytest.raises(exceptions.InvalidArgument):
+        with pytest.raises(exceptions.NotFound):
             store.mget(["any_key"])
 
         await store.get_engine().close()
