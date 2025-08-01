@@ -15,8 +15,8 @@ import os
 import uuid
 from typing import AsyncIterator, Iterator, List, Tuple
 
-import pytest_asyncio
 import pytest
+import pytest_asyncio
 from google.api_core import exceptions
 from google.cloud import bigtable
 

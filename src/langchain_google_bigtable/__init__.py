@@ -18,6 +18,8 @@ from .chat_message_history import (
     create_chat_history_table,
     init_chat_history_table,
 )
+from .engine import BigtableEngine
+from .key_value_store import BigtableByteStore, init_key_value_store_table
 from .loader import (
     BigtableLoader,
     BigtableSaver,
@@ -32,6 +34,9 @@ __all__ = [
     "create_chat_history_table",
     "init_document_table",
     "init_chat_history_table",
+    "init_key_value_store_table",
+    "BigtableByteStore",
+    "BigtableEngine",
     "BigtableLoader",
     "BigtableSaver",
     "MetadataMapping",
