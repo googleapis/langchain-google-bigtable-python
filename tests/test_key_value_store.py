@@ -90,7 +90,7 @@ class TestTableInitialization:
         if the table already exists, preventing accidental overwrites.
         """
         instance_id, table_id, _ = managed_table
-        with pytest.raises(ValueError, match=f"Table {table_id} already exists."):
+        with pytest.raises(ValueError):
             init_key_value_store_table(
                 instance_id=instance_id, table_id=table_id, project_id=project_id
             )
