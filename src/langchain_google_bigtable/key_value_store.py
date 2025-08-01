@@ -14,19 +14,26 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import Future
 from typing import (
     TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Dict,
+    Iterator,
     List,
     Optional,
     Sequence,
     Tuple,
+    Union,
 )
 
 import google.auth
-from async_key_value_store import AsyncBigtableByteStore
-from engine import BigtableEngine
 from google.cloud import bigtable
 from langchain_core.stores import BaseStore
+
+from .async_key_value_store import AsyncBigtableByteStore
+from .engine import BigtableEngine
 
 if TYPE_CHECKING:
     import google.auth.credentials  # type: ignore
@@ -40,7 +47,7 @@ def init_key_value_store_table(
     table_id: str,
     project_id: Optional[str] = None,
     client: Optional[bigtable.Client] = None,
-    column_families: Optional[List[str]] = [DEFAULT_COLUMN_FAMILY],
+    column_families: List[str] = [DEFAULT_COLUMN_FAMILY],
 ) -> None:
     """
     Create a table for saving of LangChain Key-value pairs.
@@ -103,13 +110,13 @@ class BigtableByteStore(BaseStore[str, bytes]):
         instance_id: str,
         table_id: str,
         *,
-        engine: BigtableEngine | None = None,
-        project_id: str | None = None,
-        app_profile_id: str | None = None,
+        engine: Optional[BigtableEngine] = None,
+        project_id: Optional[str] = None,
+        app_profile_id: Optional[str] = None,
         column_family: str = DEFAULT_COLUMN_FAMILY,
-        column_qualifier: str | bytes = DEFAULT_COLUMN_QUALIFIER,
-        credentials: google.auth.credentials.Credentials | None = None,
-        client_options: dict[str, Any] | None = None,
+        column_qualifier: Union[str, bytes] = DEFAULT_COLUMN_QUALIFIER,
+        credentials: Optional[google.auth.credentials.Credentials] = None,
+        client_options: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> BigtableByteStore:
         """
@@ -173,13 +180,13 @@ class BigtableByteStore(BaseStore[str, bytes]):
         instance_id: str,
         table_id: str,
         *,
-        engine: BigtableEngine | None = None,
-        project_id: str | None = None,
+        engine: Optional[BigtableEngine] = None,
+        project_id: Optional[str] = None,
+        app_profile_id: Optional[str] = None,
         column_family: str = DEFAULT_COLUMN_FAMILY,
-        column_qualifier: str | bytes = DEFAULT_COLUMN_QUALIFIER,
-        app_profile_id: str | None = None,
-        credentials: google.auth.credentials.Credentials | None = None,
-        client_options: dict[str, Any] | None = None,
+        column_qualifier: Union[str, bytes] = DEFAULT_COLUMN_QUALIFIER,
+        credentials: Optional[google.auth.credentials.Credentials] = None,
+        client_options: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> BigtableByteStore:
         """
@@ -237,7 +244,7 @@ class BigtableByteStore(BaseStore[str, bytes]):
             app_profile_id=app_profile_id,
         )
 
-    async def _get_async_store(self, **kwargs) -> AsyncBigtableByteStore:
+    async def _get_async_store(self, **kwargs: Any) -> AsyncBigtableByteStore:
         """
         Returns a AsyncBigtableByteStore object to be used for data operations.
         If one is not available, a new one is created.
@@ -324,9 +331,9 @@ class BigtableByteStore(BaseStore[str, bytes]):
         caller_loop = asyncio.get_running_loop()
         engine_loop = self._engine._loop
 
-        q = asyncio.Queue()
+        q: asyncio.Queue = asyncio.Queue()
         done = object()
-        producer_future: Optional[asyncio.Future] = None
+        producer_future: Optional[Future] = None
 
         async def producer():
             # This coroutine runs on the BigtableEngine background loop.
@@ -339,7 +346,7 @@ class BigtableByteStore(BaseStore[str, bytes]):
             finally:
                 caller_loop.call_soon_threadsafe(q.put_nowait, done)
 
-        producer_future = asyncio.run_coroutine_threadsafe(producer(), engine_loop)
+        producer_future = asyncio.run_coroutine_threadsafe(producer(), engine_loop)  # type: ignore
 
         while True:
             item = await q.get()
@@ -418,9 +425,9 @@ class BigtableByteStore(BaseStore[str, bytes]):
         Yields:
             Keys from the table that match a given prefix.
         """
-        q = asyncio.Queue()
+        q: asyncio.Queue = asyncio.Queue()
         done = object()
-        producer_future: Optional[asyncio.Future] = None
+        producer_future: Optional[Future] = None
 
         async def producer():
             try:
@@ -433,11 +440,11 @@ class BigtableByteStore(BaseStore[str, bytes]):
                 await q.put(done)
 
         producer_future = asyncio.run_coroutine_threadsafe(
-            producer(), self._engine._loop
+            producer(), self._engine._loop  # type: ignore
         )
 
         while True:
-            get_future = asyncio.run_coroutine_threadsafe(q.get(), self._engine._loop)
+            get_future = asyncio.run_coroutine_threadsafe(q.get(), self._engine._loop)  # type: ignore
             item = get_future.result()
 
             if item is done:

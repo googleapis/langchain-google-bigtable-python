@@ -13,7 +13,7 @@
 # limitations under the License.
 import os
 import uuid
-from typing import Any, AsyncGenerator, Iterator, Optional
+from typing import Any, Iterator, Optional
 from unittest.mock import MagicMock
 
 import google.auth
@@ -58,7 +58,7 @@ def instance_id() -> str:
 
 
 @pytest.fixture(scope="session")
-def dynamic_table_id(project_id: str, instance_id: str) -> AsyncGenerator[str, None]:
+def dynamic_table_id(project_id: str, instance_id: str) -> Iterator[str]:
     # Uses the admin client for table creation and deletion
     admin_client = bigtable.Client(project=project_id, admin=True)
     instance = admin_client.instance(instance_id)
