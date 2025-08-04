@@ -432,7 +432,7 @@ class BigtableByteStore(BaseStore[str, bytes]):
             return queue
 
         queue_creation_future = asyncio.run_coroutine_threadsafe(
-            create_queue(), self._engine._loop # type: ignore
+            create_queue(), self._engine._loop  # type: ignore
         )
         q = queue_creation_future.result()
 
