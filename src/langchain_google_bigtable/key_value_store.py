@@ -335,18 +335,20 @@ class BigtableByteStore(BaseStore[str, bytes]):
         done = object()
         producer_future: Optional[Future] = None
 
-        async def producer():
+        async def _producer():
             # This coroutine runs on the BigtableEngine background loop.
             try:
                 store = await self._engine._run_as_async(self._get_async_store())
                 async for key in store.ayield_keys(prefix=prefix):
+                    # The queue was created within the caller_loop(main running event loop) context
+                    # Hence, its method is called within that loop
                     caller_loop.call_soon_threadsafe(q.put_nowait, key)
             except Exception as e:
                 caller_loop.call_soon_threadsafe(q.put_nowait, e)
             finally:
                 caller_loop.call_soon_threadsafe(q.put_nowait, done)
 
-        producer_future = asyncio.run_coroutine_threadsafe(producer(), engine_loop)  # type: ignore
+        producer_future = asyncio.run_coroutine_threadsafe(_producer(), engine_loop)  # type: ignore
 
         while True:
             item = await q.get()
@@ -427,16 +429,16 @@ class BigtableByteStore(BaseStore[str, bytes]):
         """
         done = object()
 
-        async def create_queue():
+        async def _create_queue():
             queue: asyncio.Queue = asyncio.Queue()
             return queue
 
         queue_creation_future = asyncio.run_coroutine_threadsafe(
-            create_queue(), self._engine._loop  # type: ignore
+            _create_queue(), self._engine._loop  # type: ignore
         )
         q = queue_creation_future.result()
 
-        async def producer(queue):
+        async def _producer(queue):
             try:
                 store = await self._get_async_store()
                 async for key in store.ayield_keys(prefix=prefix):
@@ -447,7 +449,7 @@ class BigtableByteStore(BaseStore[str, bytes]):
                 await queue.put(done)
 
         producer_future = asyncio.run_coroutine_threadsafe(
-            producer(q), self._engine._loop  # type: ignore
+            _producer(q), self._engine._loop  # type: ignore
         )
 
         while True:

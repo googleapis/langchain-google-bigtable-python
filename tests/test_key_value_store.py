@@ -116,7 +116,7 @@ class TestBigtableByteStoreSync:
 
     def test_sync_full_lifecycle(self, sync_store: BigtableByteStore) -> None:
         """
-        Tests the complete mset -> mget -> overwrite -> mdelete -> mget cycle.
+        Tests the complete mset -> mget -> overwrite -> mdelete -> mget -> yield_keys cycle.
         """
         # Initial Set
         sync_store.mset([("key1", b"value1"), ("key2", b"value2")])
@@ -133,10 +133,16 @@ class TestBigtableByteStoreSync:
         results = sync_store.mget(["key1", "key2"])
         assert results == [b"value1_overwritten", None]
 
+        # Yield Keys
+        sync_store.mdelete(list(sync_store.yield_keys()))  # Clean Slate
+        sync_store.mset([("key1", b"value1"), ("ignored_key", b"value2")])
+        matched_keys = sorted(list(sync_store.yield_keys(prefix="key")))
+        assert matched_keys == ["key1"]
+
     @pytest.mark.asyncio
     async def test_async_full_lifecycle(self, sync_store: BigtableByteStore) -> None:
         """
-        Tests the complete amset -> amget -> overwrite -> amdelete -> amget cycle.
+        Tests the complete amset -> amget -> overwrite -> amdelete -> amget -> ayield_keys cycle.
         """
         # Initial Set
         await sync_store.amset([("akey1", b"avalue1"), ("akey2", b"avalue2")])
@@ -152,6 +158,14 @@ class TestBigtableByteStoreSync:
         await sync_store.amdelete(["akey2", "anonexistent_to_delete"])
         results = await sync_store.amget(["akey1", "akey2"])
         assert results == [b"avalue1_overwritten", None]
+
+        # Yield Keys
+        await sync_store.amdelete(
+            [k async for k in sync_store.ayield_keys()]
+        )  # Clean Slate
+        await sync_store.amset([("key1", b"value1"), ("ignored_key", b"value2")])
+        matched_keys = sorted([k async for k in sync_store.ayield_keys(prefix="key")])
+        assert matched_keys == ["key1"]
 
     def test_sync_empty_and_noop_operations(
         self, sync_store: BigtableByteStore
@@ -221,7 +235,7 @@ class TestBigtableByteStoreAsync:
 
     async def test_async_full_lifecycle(self, async_store: BigtableByteStore) -> None:
         """
-        Tests the complete amset -> amget -> overwrite -> amdelete -> amget cycle.
+        Tests the complete amset -> amget -> overwrite -> amdelete -> amget -> ayield_keys cycle.
         """
         # Initial Set
         await async_store.amset([("akey1", b"avalue1"), ("akey2", b"avalue2")])
@@ -238,9 +252,17 @@ class TestBigtableByteStoreAsync:
         results = await async_store.amget(["akey1", "akey2"])
         assert results == [b"avalue1_overwritten", None]
 
+        # Yield Keys
+        await async_store.amdelete(
+            [k async for k in async_store.ayield_keys()]
+        )  # Clean Slate
+        await async_store.amset([("key1", b"value1"), ("ignored_key", b"value2")])
+        matched_keys = sorted([k async for k in async_store.ayield_keys(prefix="key")])
+        assert matched_keys == ["key1"]
+
     async def test_sync_full_lifecycle(self, async_store: BigtableByteStore) -> None:
         """
-        Tests the complete mset -> mget -> overwrite -> mdelete -> mget cycle.
+        Tests the complete mset -> mget -> overwrite -> mdelete -> mget -> yield_keys cycle.
         """
         # Initial Set
         async_store.mset([("key1", b"value1"), ("key2", b"value2")])
@@ -256,6 +278,12 @@ class TestBigtableByteStoreAsync:
         async_store.mdelete(["key2", "nonexistent_to_delete"])
         results = async_store.mget(["key1", "key2"])
         assert results == [b"value1_overwritten", None]
+
+        # Yield Keys
+        async_store.mdelete(list(async_store.yield_keys()))  # Clean Slate
+        async_store.mset([("key1", b"value1"), ("ignored_key", b"value2")])
+        matched_keys = sorted(list(async_store.yield_keys(prefix="key")))
+        assert matched_keys == ["key1"]
 
     async def test_async_empty_and_noop_operations(
         self, async_store: BigtableByteStore
