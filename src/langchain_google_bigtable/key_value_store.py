@@ -425,22 +425,29 @@ class BigtableByteStore(BaseStore[str, bytes]):
         Yields:
             Keys from the table that match a given prefix.
         """
-        q: asyncio.Queue = asyncio.Queue()
         done = object()
-        producer_future: Optional[Future] = None
 
-        async def producer():
+        async def create_queue():
+            queue: asyncio.Queue = asyncio.Queue()
+            return queue
+
+        queue_creation_future = asyncio.run_coroutine_threadsafe(
+            create_queue(), self._engine._loop
+        )
+        q = queue_creation_future.result()
+
+        async def producer(queue):
             try:
                 store = await self._get_async_store()
                 async for key in store.ayield_keys(prefix=prefix):
-                    await q.put(key)
+                    await queue.put(key)
             except Exception as e:
-                await q.put(e)
+                await queue.put(e)
             finally:
-                await q.put(done)
+                await queue.put(done)
 
         producer_future = asyncio.run_coroutine_threadsafe(
-            producer(), self._engine._loop  # type: ignore
+            producer(q), self._engine._loop  # type: ignore
         )
 
         while True:
