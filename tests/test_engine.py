@@ -11,12 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import asyncio
-import functools
 import os
 import uuid
-from typing import Any, AsyncGenerator, Iterator, Optional
+from typing import Any, Iterator, Optional
 from unittest.mock import MagicMock
 
 import google.auth
@@ -60,10 +57,8 @@ def instance_id() -> str:
     return get_env_var("INSTANCE_ID", "Bigtable Instance ID")
 
 
-@pytest_asyncio.fixture(scope="session")
-async def dynamic_table_id(
-    project_id: str, instance_id: str
-) -> AsyncGenerator[str, None]:
+@pytest.fixture(scope="session")
+def dynamic_table_id(project_id: str, instance_id: str) -> Iterator[str]:
     # Uses the admin client for table creation and deletion
     admin_client = bigtable.Client(project=project_id, admin=True)
     instance = admin_client.instance(instance_id)
@@ -73,12 +68,8 @@ async def dynamic_table_id(
 
     column_families = {TEST_COLUMN_FAMILY: bigtable.column_family.MaxVersionsGCRule(1)}
 
-    loop = asyncio.get_running_loop()
-
     try:
-        await loop.run_in_executor(
-            None, functools.partial(table.create, column_families=column_families)
-        )
+        table.create(column_families=column_families)
         yield table_id
     except exceptions.Conflict:  # Already exists
         yield table_id
@@ -86,7 +77,7 @@ async def dynamic_table_id(
         pytest.fail(f"Failed to create table {table_id}: {e}")
     finally:
         try:
-            await loop.run_in_executor(None, table.delete)
+            table.delete()
         except Exception as e:
             raise e
 
