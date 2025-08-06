@@ -417,7 +417,7 @@ class BigtableByteStore(BaseStore[str, bytes]):
 
     def yield_keys(self, *, prefix: Optional[str] = None) -> Iterator[str]:
         """
-        Asynchronously yields keys matching a given prefix.
+        Synchronously yields keys matching a given prefix.
         It only yields the keys that match the given prefix.
 
         Args:
