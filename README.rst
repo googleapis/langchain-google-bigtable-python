@@ -66,6 +66,31 @@ Windows
    <your-env>\Scripts\activate
    <your-env>\Scripts\pip.exe install langchain-google-bigtable
 
+Key-value Store Usage
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use ``BigtableByteStore`` for a key-value store in LangChain
+
+*   **ByteStore Interface:** Follows LangChain's ``ByteStore`` for string keys and byte values.
+*   **Sync/Async:** Supports both synchronous and asynchronous operations.
+*   **BigtableEngine:** Manages execution context.
+
+.. code-block:: python
+
+    from langchain_google_bigtable import BigtableByteStore, BigtableEngine
+
+    engine = await BigtableEngine.async_initialize(project_id="your-project-id")
+    store = await BigtableByteStore.create(
+        engine=engine,
+        instance_id="your-instance-id",
+        table_id="your-table-id",
+    )
+    await store.amset([("key", b"value")])
+    retrieved = await store.amget(["key"])
+
+See the full `Key-value Store`_ tutorial.
+
+.. _`Key-value Store`: https://github.com/googleapis/langchain-google-bigtable-python/blob/main/docs/key_value_store.ipynb
 
 Document Loader Usage
 ~~~~~~~~~~~~~~~~~~~~~
