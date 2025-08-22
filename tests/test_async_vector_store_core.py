@@ -42,11 +42,13 @@ EMBEDDING_COLUMN_FAMILY = "embedding-cf"
 METADATA_COLUMN_FAMILY = "md"
 VECTOR_SIZE = 3
 
+
 def get_env_var(key: str, desc: str) -> str:
     v = os.environ.get(key)
     if v is None:
         raise ValueError(f"Must set env var {key} to: {desc}")
     return v
+
 
 @pytest.fixture(scope="session")
 def project_id() -> Iterator[str]:

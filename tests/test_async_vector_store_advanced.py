@@ -45,11 +45,13 @@ EMBEDDING_COLUMN_FAMILY = "embedding-cf"
 METADATA_COLUMN_FAMILY = "md"
 VECTOR_SIZE = 3
 
+
 def get_env_var(key: str, desc: str) -> str:
     v = os.environ.get(key)
     if v is None:
         raise ValueError(f"Must set env var {key} to: {desc}")
     return v
+
 
 @pytest.fixture(scope="session")
 def project_id() -> Iterator[str]:
@@ -221,7 +223,11 @@ class TestAdvancedFeatures:
         ],
     )
     async def test_filtering_numerical_operators(
-        self, store: AsyncBigtableVectorStore, operator: str, value: int, expected_pages: List[str]
+        self,
+        store: AsyncBigtableVectorStore,
+        operator: str,
+        value: int,
+        expected_pages: List[str],
     ) -> None:
         """Tests individual numerical comparison filters: >, <, >=, <=, !="""
         added_doc_ids = await store.aadd_texts(
@@ -809,7 +815,9 @@ class TestAdvancedFeatures:
         )
         assert len(results) == 0
 
-    async def test_invalid_metadata_type_on_add(self, store: AsyncBigtableVectorStore) -> None:
+    async def test_invalid_metadata_type_on_add(
+        self, store: AsyncBigtableVectorStore
+    ) -> None:
         """Tests that adding data with a type mismatch for a mapped metadata field raises an error."""
         with pytest.raises(ValueError, match="Failed to encode value"):
             await store.aadd_texts(["bad data"], metadatas=[{"number": "not-a-number"}])
