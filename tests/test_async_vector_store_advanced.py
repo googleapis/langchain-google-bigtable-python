@@ -17,6 +17,7 @@ from typing import AsyncGenerator, AsyncIterator, Iterator, List
 
 import google.auth
 import numpy as np
+import pytest
 import pytest_asyncio
 from google.api_core import exceptions
 from google.cloud import bigtable
@@ -29,7 +30,6 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from typing_extensions import override
 
-import pytest
 from langchain_google_bigtable.async_vector_store import (
     AsyncBigtableVectorStore,
     ColumnConfig,

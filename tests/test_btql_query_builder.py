@@ -16,6 +16,7 @@ import struct
 from unittest.mock import Mock
 
 import pytest
+
 from langchain_google_bigtable.async_vector_store import (
     AsyncBigtableVectorStore,
     ColumnConfig,

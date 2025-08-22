@@ -16,6 +16,7 @@ import uuid
 from typing import AsyncGenerator, AsyncIterator, Iterator
 
 import google.auth
+import pytest
 import pytest_asyncio
 from google.api_core import exceptions
 from google.cloud import bigtable
@@ -27,7 +28,6 @@ from google.cloud.bigtable.data import (
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 
-import pytest
 from langchain_google_bigtable.async_vector_store import (
     AsyncBigtableVectorStore,
     ColumnConfig,
