@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import uuid
 from typing import AsyncGenerator, AsyncIterator, Iterator
 
@@ -42,15 +42,20 @@ EMBEDDING_COLUMN_FAMILY = "embedding-cf"
 METADATA_COLUMN_FAMILY = "md"
 VECTOR_SIZE = 3
 
+def get_env_var(key: str, desc: str) -> str:
+    v = os.environ.get(key)
+    if v is None:
+        raise ValueError(f"Must set env var {key} to: {desc}")
+    return v
 
 @pytest.fixture(scope="session")
 def project_id() -> Iterator[str]:
-    return get_env_var("PROJECT_ID", "GCP Project ID")
+    yield get_env_var("PROJECT_ID", "GCP Project ID")
 
 
 @pytest.fixture(scope="session")
 def instance_id() -> Iterator[str]:
-    return get_env_var("INSTANCE_ID", "Bigtable Instance ID")
+    yield get_env_var("INSTANCE_ID", "Bigtable Instance ID")
 
 
 @pytest.fixture(scope="session")

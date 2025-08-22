@@ -124,7 +124,7 @@ class TestPrepareBtqlQuery:
         # Assert the placeholder values are correctly encoded
         assert query_params["gt_0"] == struct.pack(">q", 100)
 
-    def test_filter_greater_than_or_equal(self, store: AsyncBigtableVectorStore):
+    def test_filter_greater_than_or_equal(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '>=' (greater than or equal) operator and FLOAT encoding."""
         params = QueryParameters(filters={"metadataFilter": {"rating": {">=": 3.5}}})
 
