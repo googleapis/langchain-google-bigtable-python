@@ -24,6 +24,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Sequence,
     Tuple,
 )
 from uuid import uuid4
@@ -370,9 +371,10 @@ class AsyncBigtableVectorStore(VectorStore):
 
     async def aadd_texts(
         self,
-        texts: List[str],
-        metadatas: Optional[List[Dict[str, Any]]] = None,
+        texts: Iterable[str],
+        metadatas: Optional[List[Dict[Any, Any]]] = None,
         ids: Optional[List[str]] = None,
+        **kwargs: Any,
     ) -> List[str]:
         """Asynchronously adds texts to the Bigtable, generating embeddings.
 
@@ -386,7 +388,7 @@ class AsyncBigtableVectorStore(VectorStore):
         """
         metadatas = metadatas or [{} for _ in texts]
         ids = ids or [str(uuid4()) for _ in texts]
-        doc_embeddings = await self.embedding_service.aembed_documents(texts)
+        doc_embeddings = await self.embedding_service.aembed_documents(list(texts))
 
         mutations = []
         added_doc_ids = []
@@ -443,7 +445,7 @@ class AsyncBigtableVectorStore(VectorStore):
                             )
                         )
             mutations.append(
-                RowMutationEntry(row_key=row_key, mutations=mutation_entries)
+                RowMutationEntry(row_key=row_key, mutations=mutation_entries)  # type: ignore
             )
 
         if mutations:
@@ -451,13 +453,15 @@ class AsyncBigtableVectorStore(VectorStore):
         return added_doc_ids
 
     async def aadd_documents(
-        self, documents: List[Document], ids: Optional[List[str]] = None
+        self,
+        documents: List[Document],
+        ids: Optional[list] = None,
+        **kwargs: Any,
     ) -> List[str]:
         """Asynchronously adds documents to the Bigtable.
 
         Args:
             documents (List[Document]): List of Document objects to add.
-            ids (Optional[List[str]]): Optional list of ids for each document.
 
         Returns:
             List[str]: List of added document ids.
@@ -466,13 +470,15 @@ class AsyncBigtableVectorStore(VectorStore):
         metadatas = [doc.metadata for doc in documents]
         if not ids:
             ids = [doc.id if hasattr(doc, "id") else str(uuid4()) for doc in documents]
-        return await self.aadd_texts(texts, metadatas, ids)
+        return await self.aadd_texts(texts, metadatas, ids, **kwargs)
 
-    async def adelete(self, ids: List[str]) -> Optional[bool]:
+    async def adelete(
+        self, ids: Optional[list] = None, **kwargs: Any
+    ) -> Optional[bool]:
         """Asynchronously deletes documents from Bigtable.
 
         Args:
-            ids (List[str]): List of document IDs to delete.
+            ids (Optional[list]): List of document IDs to delete.
 
         Returns:
             Optional[bool]: True if the deletion was attempted, None if no IDs were provided.
@@ -491,11 +497,11 @@ class AsyncBigtableVectorStore(VectorStore):
             await self.async_table.bulk_mutate_rows(mutations)
         return True
 
-    async def aget_by_ids(self, ids: List[str]) -> List[Document]:
+    async def aget_by_ids(self, ids: Sequence[str]) -> List[Document]:
         """Asynchronously retrieves documents by their IDs.
 
         Args:
-            ids (List[str]): List of document IDs to retrieve.
+            ids (Sequence[str]): List of document IDs to retrieve.
 
         Returns:
             List[Document]: List of Document objects retrieved.
@@ -510,7 +516,7 @@ class AsyncBigtableVectorStore(VectorStore):
         ]
         row_filter = bigtable.data.row_filters.CellsColumnLimitFilter(1)
 
-        query = bigtable.data.ReadRowsQuery(row_keys=row_keys, row_filter=row_filter)
+        query = bigtable.data.ReadRowsQuery(row_keys=row_keys, row_filter=row_filter)  # type: ignore
         try:
             rows = await self.async_table.read_rows(query)
         except GoogleAPIError as e:
@@ -661,8 +667,8 @@ class AsyncBigtableVectorStore(VectorStore):
             the updated parameter count.
         """
         conditions = []
-        local_params = {}
-        local_params_type = {}
+        local_params: Dict[Any, Any] = {}
+        local_params_type: Dict[Any, Any] = {}
         new_line = "\n"
         tab_space = "\t"
 
@@ -861,21 +867,23 @@ class AsyncBigtableVectorStore(VectorStore):
     def _prepare_btql_query(
         self,
         query_vector: List[float],
-        k: int,
-        query_parameters: QueryParameters,
+        k: Optional[int] = 4,
+        query_parameters: Optional[QueryParameters] = None,
     ) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
         """Prepares the full BTQL query string, parameters, and types for a vector search.
 
         Args:
             query_vector (List[float]): The vector to search with.
-            k (int): The number of nearest neighbors to retrieve.
-            query_parameters (QueryParameters): The parameters for the query, including distance
+            k (Optional[int]): The number of nearest neighbors to retrieve.
+            query_parameters (Optional[QueryParameters]): The parameters for the query, including distance
                                                 strategy and filters.
 
         Returns:
             Tuple[str, Dict[str, Any], Dict[str, Any]]: A tuple containing the BTQL query string,
             a dictionary of query parameters, and a dictionary of parameter types.
         """
+        if not query_parameters:
+            query_parameters = QueryParameters()
         distance_metric = (
             "COSINE_DISTANCE"
             if query_parameters.distance_strategy == DistanceStrategy.COSINE
@@ -922,9 +930,9 @@ class AsyncBigtableVectorStore(VectorStore):
     async def query_vector_store(
         self,
         query_vector: List[float],
-        k: Optional[int],
+        k: Optional[int] = 4,
         query_parameters: Optional[QueryParameters] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> Any:
         """Executes a vector search query against the Bigtable instance.
 
         Args:
@@ -933,7 +941,7 @@ class AsyncBigtableVectorStore(VectorStore):
             query_parameters (Optional[QueryParameters]): Query parameters including filters.
 
         Returns:
-            List[Dict[str, Any]]: A list of dictionaries, where each dict represents a result row.
+            A list of the query result rows.
         """
         # Check if the embeddings is a NumPy array
         if isinstance(query_vector, np.ndarray):
@@ -1149,7 +1157,7 @@ class AsyncBigtableVectorStore(VectorStore):
 
     async def amax_marginal_relevance_search_by_vector(
         self,
-        query_vector: list[float],
+        embedding: list[float],
         k: int = 4,
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
@@ -1159,7 +1167,7 @@ class AsyncBigtableVectorStore(VectorStore):
         """Return docs selected using the maximal marginal relevance.
 
         Args:
-            query_vector (list[float]): The embedding vector for the query.
+            embedding (list[float]): The embedding vector for the query.
             k (int): Number of documents to return. Defaults to 4.
             fetch_k (int): Number of documents to fetch for MMR. Defaults to 20.
             lambda_mult (float): Diversity factor. Defaults to 0.5.
@@ -1169,6 +1177,7 @@ class AsyncBigtableVectorStore(VectorStore):
         Returns:
             List[Document]: A list of documents selected by MMR.
         """
+        query_vector = embedding
         documents = [
             doc
             for doc, score in await self.amax_marginal_relevance_search_with_score_by_vector(
@@ -1185,9 +1194,9 @@ class AsyncBigtableVectorStore(VectorStore):
     async def amax_marginal_relevance_search_with_score_by_vector(
         self,
         embedding: list[float],
-        k: Optional[int] = 4,
-        fetch_k: Optional[int] = 20,
-        lambda_mult: Optional[float] = 0.5,
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
         query_parameters: Optional[QueryParameters] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
@@ -1197,7 +1206,7 @@ class AsyncBigtableVectorStore(VectorStore):
             embedding (list[float]): The embedding vector for the query.
             k (Optional[int]): Number of documents to return. Defaults to 4.
             fetch_k (Optional[int]): Number of documents to fetch for MMR. Defaults to 20.
-            lambda_mult (Optional[float]): Diversity factor. Defaults to 0.5.
+            lambda_mult (float): Diversity factor. Defaults to 0.5.
             query_parameters (Optional[QueryParameters]): Optional query parameters.
             **kwargs (Any): Additional keyword arguments, can include 'filter'.
 

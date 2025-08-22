@@ -11,12 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import uuid
 from typing import AsyncGenerator, AsyncIterator, Iterator
 
 import google.auth
-import pytest
 import pytest_asyncio
 from google.api_core import exceptions
 from google.cloud import bigtable
@@ -28,9 +27,11 @@ from google.cloud.bigtable.data import (
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 
+import pytest
 from langchain_google_bigtable.async_vector_store import (
     AsyncBigtableVectorStore,
     ColumnConfig,
+    DistanceStrategy,
     Encoding,
     MetadataMapping,
     QueryParameters,
@@ -43,14 +44,21 @@ METADATA_COLUMN_FAMILY = "md"
 VECTOR_SIZE = 3
 
 
+def get_env_var(key: str, desc: str) -> str:
+    v = os.environ.get(key)
+    if v is None:
+        raise ValueError(f"Must set env var {key} to: {desc}")
+    return v
+
+
 @pytest.fixture(scope="session")
 def project_id() -> Iterator[str]:
-    return get_env_var("PROJECT_ID", "GCP Project ID")
+    yield get_env_var("PROJECT_ID", "GCP Project ID")
 
 
 @pytest.fixture(scope="session")
 def instance_id() -> Iterator[str]:
-    return get_env_var("INSTANCE_ID", "Bigtable Instance ID")
+    yield get_env_var("INSTANCE_ID", "Bigtable Instance ID")
 
 
 @pytest.fixture(scope="session")
@@ -194,7 +202,9 @@ class TestCoreFunctionality:
         assert doc.page_content == "a document about cats"
         assert isinstance(score, float)
 
-        query_params_euclidean = QueryParameters(distance_strategy="EUCLIDEAN")
+        query_params_euclidean = QueryParameters(
+            distance_strategy=DistanceStrategy.EUCLIDEAN
+        )
         results_euclidean = await store.asimilarity_search_with_relevance_scores(
             query, k=1, query_parameters=query_params_euclidean
         )

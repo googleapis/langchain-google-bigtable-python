@@ -11,12 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import uuid
-from typing import AsyncGenerator, AsyncIterator, Iterator
+from typing import AsyncGenerator, AsyncIterator, Iterator, List
 
 import google.auth
 import numpy as np
-import pytest
 import pytest_asyncio
 from google.api_core import exceptions
 from google.cloud import bigtable
@@ -29,6 +29,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from typing_extensions import override
 
+import pytest
 from langchain_google_bigtable.async_vector_store import (
     AsyncBigtableVectorStore,
     ColumnConfig,
@@ -36,6 +37,7 @@ from langchain_google_bigtable.async_vector_store import (
     Encoding,
     MetadataMapping,
     QueryParameters,
+    VectorDataType,
 )
 
 TEST_ROW_PREFIX = "pytest-advanced-vstore-"
@@ -45,14 +47,21 @@ METADATA_COLUMN_FAMILY = "md"
 VECTOR_SIZE = 3
 
 
+def get_env_var(key: str, desc: str) -> str:
+    v = os.environ.get(key)
+    if v is None:
+        raise ValueError(f"Must set env var {key} to: {desc}")
+    return v
+
+
 @pytest.fixture(scope="session")
 def project_id() -> Iterator[str]:
-    return get_env_var("PROJECT_ID", "GCP Project ID")
+    yield get_env_var("PROJECT_ID", "GCP Project ID")
 
 
 @pytest.fixture(scope="session")
 def instance_id() -> Iterator[str]:
-    return get_env_var("INSTANCE_ID", "Bigtable Instance ID")
+    yield get_env_var("INSTANCE_ID", "Bigtable Instance ID")
 
 
 @pytest.fixture(scope="session")
@@ -215,7 +224,11 @@ class TestAdvancedFeatures:
         ],
     )
     async def test_filtering_numerical_operators(
-        self, store: AsyncBigtableVectorStore, operator, value, expected_pages
+        self,
+        store: AsyncBigtableVectorStore,
+        operator: str,
+        value: int,
+        expected_pages: List[str],
     ) -> None:
         """Tests individual numerical comparison filters: >, <, >=, <=, !="""
         added_doc_ids = await store.aadd_texts(
@@ -666,7 +679,7 @@ class TestAdvancedFeatures:
                 "any", k=1, query_parameters=query_params
             )
             assert len(search_results) == 1, f"Filter failed for key: {key}"
-            assert search_results[0].id.endswith("all-encodings-doc")
+            assert search_results[0].id.endswith("all-encodings-doc")  # type: ignore
 
         await store_all_encodings.adelete(["all-encodings-doc"])
         assert len(await store_all_encodings.aget_by_ids(["all-encodings-doc"])) == 0
@@ -696,7 +709,7 @@ class TestAdvancedFeatures:
         try:
             await store_double_encoding.aadd_texts(texts_to_add, ids=doc_ids)
             query = "beta document"
-            query_params = QueryParameters(vector_data_type="DOUBLE64")
+            query_params = QueryParameters(vector_data_type=VectorDataType.DOUBLE64)
             results = await store_double_encoding.asimilarity_search(
                 query, k=1, query_parameters=query_params
             )
@@ -803,7 +816,9 @@ class TestAdvancedFeatures:
         )
         assert len(results) == 0
 
-    async def test_invalid_metadata_type_on_add(self, store: AsyncBigtableVectorStore):
+    async def test_invalid_metadata_type_on_add(
+        self, store: AsyncBigtableVectorStore
+    ) -> None:
         """Tests that adding data with a type mismatch for a mapped metadata field raises an error."""
         with pytest.raises(ValueError, match="Failed to encode value"):
             await store.aadd_texts(["bad data"], metadatas=[{"number": "not-a-number"}])
