@@ -11,7 +11,10 @@ authors = [
 dependencies = [
     "langchain-core>=0.1.1, <1.0.0",
     "google-cloud-bigtable>=2.22.0, <3.0.0",
-    "deprecated>=1.2.14, <2.0.0"
+    "deprecated>=1.2.14, <2.0.0",
+    "numpy>=1.24.4, <3.0.0; python_version >= '3.11'",
+    "numpy>=1.24.4, <=2.2.6; python_version == '3.10'",
+    "numpy>=1.24.4, <=2.0.2; python_version <= '3.9'"
 ]
 classifiers = [
     "Intended Audience :: Developers",
