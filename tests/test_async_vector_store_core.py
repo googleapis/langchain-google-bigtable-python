@@ -122,7 +122,7 @@ class TestCoreFunctionality:
                 column_family=CONTENT_COLUMN_FAMILY, column_qualifier="content"
             ),
             embedding_column=ColumnConfig(
-                EMBEDDING_COLUMN_FAMILY, column_qualifier="embedding"
+                column_family=EMBEDDING_COLUMN_FAMILY, column_qualifier="embedding"
             ),
             metadata_mappings=[
                 MetadataMapping("color", Encoding.UTF8),

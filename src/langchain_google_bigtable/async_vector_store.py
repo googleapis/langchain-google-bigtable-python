@@ -57,10 +57,10 @@ from langchain_core.vectorstores import (
 from langchain_google_bigtable.loader import Encoding
 
 try:
-    from typing import Literal, TypeAlias
+    from typing import Literal, TypeAlias  # type: ignore
 except ImportError:
     # For Python versions < 3.10
-    from typing_extensions import Literal, TypeAlias
+    from typing_extensions import Literal, TypeAlias  # type: ignore
 
 METADATA_COLUMN_FAMILY = "md"
 DEFAULT_COLLECTION = "default_vectors"
