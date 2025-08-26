@@ -26,6 +26,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Union,
 )
 from uuid import uuid4
 
@@ -55,7 +56,44 @@ from langchain_core.vectorstores import (
 
 from langchain_google_bigtable.loader import Encoding
 
+try:
+    from typing import Literal, TypeAlias
+except ImportError:
+    # For Python versions < 3.10
+    from typing_extensions import Literal, TypeAlias
+
 METADATA_COLUMN_FAMILY = "md"
+DEFAULT_COLLECTION = "default_vectors"
+
+# The supported comparison operators for metadata value filters.
+OperatorType: TypeAlias = Literal[
+    ">", "<", ">=", "<=", "==", "!=", "in", "nin", "contains", "like"
+]
+
+# Represents a dictionary for a single value comparison,
+# e.g., {"==": "blue"} or {">=": 42}. The value can be any comparable type.
+OperatorDict: TypeAlias = Dict[OperatorType, Any]
+
+# A forward reference is necessary because ValueFilterDict is used within its own definition.
+ValueFilterDict: TypeAlias
+
+# Represents the recursive structure for filtering on metadata values.
+# Keys can be a metadata field (e.g., "color"), or a logical filter
+# ("ColumnValueChainFilter" for AND, "ColumnValueUnionFilter" for OR)
+# which contains another ValueFilterDict.
+ValueFilterDict = Dict[str, Union[OperatorDict, "ValueFilterDict"]]
+
+# Represents the dictionary provided to the 'metadataFilter' key.
+# It can contain high-level qualifier filters and the nested ValueFilterDict.
+MetadataFilterDict: TypeAlias = Dict[
+    str, Union[str, List[str], OperatorDict, ValueFilterDict]
+]
+
+# Represents the top-level filter dictionary that users can provide.
+FilterDict: TypeAlias = Dict[
+    Literal["collectionFilter", "metadataFilter"],
+    Union[str, MetadataFilterDict],
+]
 
 
 class DistanceStrategy(Enum):
@@ -153,7 +191,7 @@ class AsyncBigtableVectorStore(VectorStore):
         embedding_service: Embeddings,
         content_column: ColumnConfig,
         embedding_column: ColumnConfig,
-        collection: Optional[str] = None,
+        collection: str = DEFAULT_COLLECTION,
         metadata_as_json_column: Optional[ColumnConfig] = None,
         metadata_mappings: Optional[List[MetadataMapping]] = None,
     ):
@@ -166,7 +204,7 @@ class AsyncBigtableVectorStore(VectorStore):
             embedding_service (Embeddings): The embedding service to use.
             content_column (ColumnConfig): ColumnConfig for document content.
             embedding_column (ColumnConfig): ColumnConfig for vector embeddings.
-            collection (Optional[str]): The name of the collection (optional). It is used as a prefix for row keys.
+            collection (str): The name of the collection. It is used as a prefix for row keys. Defaults to "default_vectors"
             metadata_as_json_column (Optional[ColumnConfig]): ColumnConfig for metadata as JSON column.
             metadata_mappings (Optional[List[MetadataMapping]]): List of MetadataMapping for additional metadata columns.
         """
@@ -386,34 +424,40 @@ class AsyncBigtableVectorStore(VectorStore):
         Returns:
             List[str]: List of added document ids.
         """
+        # Ensure metadatas and ids are initialized; create empty dicts or UUIDs if not provided.
         metadatas = metadatas or [{} for _ in texts]
         ids = ids or [str(uuid4()) for _ in texts]
+
+        # Generate embeddings for all texts in a single batch call.
         doc_embeddings = await self.embedding_service.aembed_documents(list(texts))
 
         mutations = []
         added_doc_ids = []
-        row_keys = []
+
         for text, embeddings, metadata, doc_id in zip(
             texts, doc_embeddings, metadatas, ids
         ):
-            # Check if the embeddings is a NumPy array
+            # Normalize embedding data from NumPy arrays to standard Python lists.
             if isinstance(embeddings, np.ndarray):
-                # If so, change to list
                 embeddings = embeddings.tolist()
 
-            # Convert any np.float type objects to float to preparing for encoding
+            # Convert any NumPy numeric types (e.g., np.float32) to native Python floats.
             if embeddings and isinstance(embeddings[0], np.number):
                 embeddings = [float(x) for x in embeddings]
 
+            # Construct the unique Bigtable row key, prefixing with the collection name.
             row_key = f"{self.collection}:{doc_id}" if self.collection else doc_id
-            row_keys.append(row_key)
             added_doc_ids.append(doc_id)
+
+            # Create the list of mutations for the current row.
             mutation_entries = [
+                # Add the document's text content.
                 SetCell(
                     self.content_column.column_family,
                     self.content_column.column_qualifier,
                     self._encode_value(text, self.content_column.encoding),
                 ),
+                # Add the document's vector embedding.
                 SetCell(
                     self.embedding_column.column_family,
                     self.embedding_column.column_qualifier,
@@ -422,6 +466,8 @@ class AsyncBigtableVectorStore(VectorStore):
                     ),
                 ),
             ]
+
+            # If configured, store the entire metadata dictionary as a single JSON string.
             if self.metadata_as_json_column and metadata:
                 mutation_entries.append(
                     SetCell(
@@ -432,6 +478,8 @@ class AsyncBigtableVectorStore(VectorStore):
                         ),
                     )
                 )
+
+            # If configured, store specific metadata fields in their own columns to be used for filtering.
             if self.metadata_mappings and metadata:
                 for mapping in self.metadata_mappings:
                     if mapping.metadata_key in metadata:
@@ -444,6 +492,7 @@ class AsyncBigtableVectorStore(VectorStore):
                                 ),
                             )
                         )
+
             mutations.append(
                 RowMutationEntry(row_key=row_key, mutations=mutation_entries)  # type: ignore
             )
@@ -509,22 +558,28 @@ class AsyncBigtableVectorStore(VectorStore):
         Raises:
             GoogleAPIError: If there's an error during the read operation.
         """
+        # Return early if no IDs are provided to avoid an unnecessary API call.
         if not ids:
             return []
+
+        # Construct the full Bigtable row keys by prepending the collection prefix.
         row_keys = [
             f"{self.collection}:{key}" if self.collection else key for key in ids
         ]
+
         row_filter = bigtable.data.row_filters.CellsColumnLimitFilter(1)
 
+        # Prepare and execute the query to read the specified rows from Bigtable.
         query = bigtable.data.ReadRowsQuery(row_keys=row_keys, row_filter=row_filter)  # type: ignore
         try:
             rows = await self.async_table.read_rows(query)
         except GoogleAPIError as e:
             raise GoogleAPIError(f"Error while getting documents by ids: {e}") from e
-        documents = []
-        for row in rows:
-            content = None
 
+        documents = []
+        # Iterate through the retrieved Bigtable rows to reconstruct each document.
+        for row in rows:
+            # Decode the main document content from its designated column.
             content = self._decode_value(
                 row.get_cells(
                     family=self.content_column.column_family,
@@ -532,7 +587,10 @@ class AsyncBigtableVectorStore(VectorStore):
                 )[0].value,
                 self.content_column.encoding,
             )
+
+            # Reconstruct the metadata dictionary from the row's cells.
             metadata = {}
+            # If a JSON column is configured, decode the entire metadata object from it.
             if self.metadata_as_json_column and row.__contains__(
                 (
                     self.metadata_as_json_column.column_family,
@@ -548,7 +606,7 @@ class AsyncBigtableVectorStore(VectorStore):
                         self.metadata_as_json_column.encoding,
                     )
                 )
-
+            # Otherwise, check for individual metadata fields based on the provided mappings.
             elif self.metadata_mappings:
                 for mapping in self.metadata_mappings:
                     if row.__contains__(
@@ -565,28 +623,28 @@ class AsyncBigtableVectorStore(VectorStore):
                             mapping.encoding,
                         )
 
+            # Re-create the LangChain Document object with the retrieved data.
             if content:
                 row_id = (
                     row.row_key.decode("utf-8")
                     if isinstance(row.row_key, bytes)
                     else row.row_key
                 )
+                # Clean the row key by removing the collection prefix to get the original document ID.
                 if self.collection:
-                    row_id = row_id.replace(
-                        f"{self.collection}:", ""
-                    )  # remove collection prefix when retrieving keys
+                    row_id = row_id.replace(f"{self.collection}:", "")
                 documents.append(
                     Document(page_content=content, metadata=metadata, id=row_id)
                 )
         return documents
 
     def _build_where_clause(
-        self, filters: Optional[Dict[str, Any]]
+        self, filters: Optional[FilterDict]
     ) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
         """Builds the WHERE clause for a BTQL query from a dictionary of filters.
 
         Args:
-            filters (Optional[Dict[str, Any]]): A dictionary of filters to apply to the query.
+            filters (Optional[FilterDict]): A dictionary of filters to apply to the query.
 
         Returns:
             Tuple[str, Dict[str, Any], Dict[str, Any]]: A tuple containing the WHERE clause
@@ -595,43 +653,36 @@ class AsyncBigtableVectorStore(VectorStore):
         """
 
         btql_where_clause = ""
-        params = {}
-        params_type = {}
+        params: Dict[str, Any] = {}
+        params_type: Dict[str, Any] = {}
         param_count = 0
         new_line = "\n"
         tab_space = "\t"
         line_padding = " " * 1
-        row_prefix_clause = None
-        if self.collection:
-            # The Vector Store instance is associated with a specific collection.
-            # Default to filtering rows using the collection name as a prefix.
-            param_key = f"rowPrefix_{param_count}"
-            collection_prefix = f"{self.collection}:"
-            params[param_key] = collection_prefix.encode("utf-8")
-            params_type[param_key] = Type.Bytes()
-            row_prefix_clause = (
-                f"{new_line}{line_padding}{tab_space}{tab_space}"
-                f"(STARTS_WITH(_key, @{param_key})) {new_line}"
-            )
-            param_count += 1
-            if filters and "collectionFilter" in filters:
-                # User provided a 'collectionPrefix' filter, overriding the default.
-                # Update the parameter with the user-specified prefix.
-                params[param_key] = filters["collectionFilter"].encode("utf-8")
-        if not self.collection and filters and "collectionFilter" in filters:
-            # User provided a 'collectionPrefix' filter, but the Vector Store
-            # is NOT tied to a specific collection. Apply the filter to all rows.
-            param_key = f"rowPrefix_{param_count}"
+        row_prefix_clause = ""
+
+        # The Vector Store instance is associated with a specific collection.
+        # Default to filtering rows using the collection name as a prefix.
+        param_key = f"rowPrefix_{param_count}"
+        collection_prefix = f"{self.collection}:"
+        params[param_key] = collection_prefix.encode("utf-8")
+        params_type[param_key] = Type.Bytes()
+        row_prefix_clause = (
+            f"{new_line}{line_padding}{tab_space}{tab_space}"
+            f"(STARTS_WITH(_key, @{param_key})) {new_line}"
+        )
+        param_count += 1
+
+        # If the user provides a 'collectionFilter', it overrides the default
+        # collection prefix filter, allowing for more specific row key filtering.
+        if filters and "collectionFilter" in filters:
+            # User provided a 'collectionFilter' filter, overriding the default.
+            # Update the parameter with the user-specified prefix.
             params[param_key] = filters["collectionFilter"].encode("utf-8")
-            params_type[param_key] = Type.Bytes()
-            row_prefix_clause = (
-                f"{new_line}{line_padding}{tab_space}{tab_space}"
-                f"(STARTS_WITH(_key, @{param_key})) {new_line}"
-            )
-            param_count += 1
 
         metadata_clause = ""
         if filters and "metadataFilter" in filters:
+            # Process the nested metadata filters to build the rest of the clause.
             (
                 metadata_clause,
                 metadata_params,
@@ -643,6 +694,7 @@ class AsyncBigtableVectorStore(VectorStore):
             params.update(metadata_params)
             params_type.update(metadata_params_type)
 
+        # Combine the row prefix and metadata clauses with an AND operator if both exist.
         if row_prefix_clause and metadata_clause:
             joiner = f"{new_line}{line_padding}{tab_space}{tab_space} AND {new_line}"
             btql_where_clause = row_prefix_clause + joiner + metadata_clause
@@ -652,12 +704,12 @@ class AsyncBigtableVectorStore(VectorStore):
         return btql_where_clause, params, params_type
 
     def _process_metadata_filter(
-        self, filter_dict: Dict[str, Any], param_count: int, line_padding: str
+        self, filter_dict: MetadataFilterDict, param_count: int, line_padding: str
     ) -> Tuple[str, Dict[str, Any], Dict[str, Any], int]:
         """Processes metadata-specific filters for the WHERE clause.
 
         Args:
-            filter_dict (Dict[str, Any]): The dictionary containing metadata filters.
+            filter_dict (MetadataFilterDict): The dictionary containing metadata filters.
             param_count (int): The current count of parameters to ensure unique names.
             line_padding (str): A string for formatting the query with appropriate indentation.
 
@@ -667,13 +719,15 @@ class AsyncBigtableVectorStore(VectorStore):
             the updated parameter count.
         """
         conditions = []
-        local_params: Dict[Any, Any] = {}
-        local_params_type: Dict[Any, Any] = {}
+        local_params: Dict[str, Any] = {}
+        local_params_type: Dict[str, Any] = {}
         new_line = "\n"
         tab_space = "\t"
 
         remaining_filters = filter_dict.copy()
 
+        # First, handle special top-level qualifier filters. These check for the
+        # existence or pattern of metadata keys (column qualifiers) themselves.
         if "Qualifiers" in remaining_filters:
             param_key = f"qualifiers_{param_count}"
             local_params[param_key] = [
@@ -714,16 +768,18 @@ class AsyncBigtableVectorStore(VectorStore):
             conditions.append(new_clause)
             param_count += 1
 
+        # After processing qualifier filters, the rest are value-based filters.
         if remaining_filters:
             line_padding += tab_space
-
+            # Cast the remaining filters to ValueFilterDict for the recursive processor.
+            value_filters: ValueFilterDict = remaining_filters
             (
                 value_clause,
                 value_params,
                 value_params_type,
                 param_count,
             ) = self._process_value_filters(
-                remaining_filters, "AND", param_count, line_padding
+                value_filters, "AND", param_count, line_padding
             )
             if value_clause:
                 value_clause = f"{new_line}{line_padding}{value_clause}"
@@ -738,7 +794,7 @@ class AsyncBigtableVectorStore(VectorStore):
 
     def _process_value_filters(
         self,
-        filter_dict: Dict[str, Any],
+        filter_dict: ValueFilterDict,
         logical_operator: str,
         param_count: int,
         line_padding: str,
@@ -746,7 +802,7 @@ class AsyncBigtableVectorStore(VectorStore):
         """Processes value-based filters for the WHERE clause.
 
         Args:
-            filter_dict (Dict[str, Any]): The dictionary of filters to process.
+            filter_dict (ValueFilterDict): The dictionary of filters to process.
             logical_operator (str): The logical operator ("AND" or "OR") to join conditions.
             param_count (int): The current count of parameters for unique naming.
             line_padding (str): A string for formatting the query with indentation.
@@ -757,28 +813,22 @@ class AsyncBigtableVectorStore(VectorStore):
             the updated parameter count.
         """
         conditions = []
-        local_params = {}
-        local_params_type = {}
+        local_params: Dict[str, Any] = {}
+        local_params_type: Dict[str, Any] = {}
         new_line = "\n"
         tab_space = "\t"
 
         for key, value in filter_dict.items():
-            if key in [
-                "rowPrefix",
-                "Qualifiers",
-                "ColumnQualifierPrefix",
-                "ColumnQualifierRegex",
-            ]:
-                continue
             if key not in self._metadata_lookup and key not in [
-                "QualifierUnionFilter",
-                "QualifierChainFilter",
+                "ColumnValueUnionFilter",
+                "ColumnValueChainFilter",
             ]:
                 raise ValueError(
                     f"Unsupported filter or Metadata Column: {key}. Initialize the class with this metadatamapping to filter using this metadata."
                 )
 
-            if key == "QualifierChainFilter":
+            # Recursively process nested logical filters.
+            if key == "ColumnValueChainFilter":
                 sub_clause, sub_params, sub_params_type, param_count = (
                     self._process_value_filters(
                         value, "AND", param_count, line_padding + tab_space
@@ -787,7 +837,7 @@ class AsyncBigtableVectorStore(VectorStore):
                 conditions.append(sub_clause)
                 local_params.update(sub_params)
                 local_params_type.update(sub_params_type)
-            elif key == "QualifierUnionFilter":
+            elif key == "ColumnValueUnionFilter":
                 sub_clause, sub_params, sub_params_type, param_count = (
                     self._process_value_filters(
                         value, "OR", param_count, line_padding + tab_space
@@ -796,6 +846,8 @@ class AsyncBigtableVectorStore(VectorStore):
                 conditions.append(sub_clause)
                 local_params.update(sub_params)
                 local_params_type.update(sub_params_type)
+
+            # Process an OperatorDict, which represents a direct value comparison.
             elif isinstance(value, dict):
                 op_map = {
                     ">": (">", "gt"),
@@ -817,6 +869,7 @@ class AsyncBigtableVectorStore(VectorStore):
                     param_key = f"{op_prefix}_{param_count}"
 
                     inner_expr = ""
+                    # Handle different operator types and their required BTQL syntax.
                     if op in {">", "<", ">=", "<=", "==", "!="}:
                         local_params[param_key] = self._encode_value(
                             op_val, self._metadata_lookup[key][3]
@@ -853,12 +906,12 @@ class AsyncBigtableVectorStore(VectorStore):
                     conditions.append(clause)
                     param_count += 1
             else:
-                raise ValueError(f"Unsupported filter type: {value}")
+                raise ValueError(f"Unsupported filter value type: {value}")
 
         if not conditions:
             return "", {}, {}, param_count
 
-        joiner = f"{new_line}{line_padding}{tab_space}{logical_operator}{line_padding}{new_line}"
+        joiner = f"{new_line}{line_padding}{tab_space} {logical_operator} {line_padding}{new_line}"
         joined_conditions = joiner.join(conditions)
         full_clause = f"{new_line}{line_padding}({new_line}{joined_conditions}{new_line}{line_padding}){new_line}"
 
@@ -866,18 +919,18 @@ class AsyncBigtableVectorStore(VectorStore):
 
     def _prepare_btql_query(
         self,
-        query_vector: List[float],
+        embedding: List[float],
         k: Optional[int] = 4,
         query_parameters: Optional[QueryParameters] = None,
     ) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
-        """Prepares the full BTQL query string, parameters, and types for a vector search.
+        """
+        Prepares the full BTQL query string, parameters, and types for a vector search.
 
         Args:
-            query_vector (List[float]): The vector to search with.
+            embedding (List[float]): The vector to search with.
             k (Optional[int]): The number of nearest neighbors to retrieve.
             query_parameters (Optional[QueryParameters]): The parameters for the query, including distance
                                                 strategy and filters.
-
         Returns:
             Tuple[str, Dict[str, Any], Dict[str, Any]]: A tuple containing the BTQL query string,
             a dictionary of query parameters, and a dictionary of parameter types.
@@ -915,7 +968,7 @@ class AsyncBigtableVectorStore(VectorStore):
         btql_query += f"""
                     {distance_metric}(
                         {vector_data_type}(`{self.embedding_column.column_family}`['{self.embedding_column.column_qualifier}']), 
-                        {query_vector}) 
+                        {embedding}) 
                     AS distance
                 FROM 
                     `{self.async_table.table_id}`
@@ -925,18 +978,19 @@ class AsyncBigtableVectorStore(VectorStore):
                 LIMIT 
                     {k};
         """
+        print(btql_query)
         return btql_query, params, params_type
 
     async def query_vector_store(
         self,
-        query_vector: List[float],
+        embedding: List[float],
         k: Optional[int] = 4,
         query_parameters: Optional[QueryParameters] = None,
     ) -> Any:
         """Executes a vector search query against the Bigtable instance.
 
         Args:
-            query_vector (List[float]): The vector to search for.
+            embedding (List[float]): The vector to search for.
             k (Optional[int]): The number of results to return.
             query_parameters (Optional[QueryParameters]): Query parameters including filters.
 
@@ -944,17 +998,17 @@ class AsyncBigtableVectorStore(VectorStore):
             A list of the query result rows.
         """
         # Check if the embeddings is a NumPy array
-        if isinstance(query_vector, np.ndarray):
+        if isinstance(embedding, np.ndarray):
             # If so, change to list
-            query_vector = query_vector.tolist()
+            embedding = embedding.tolist()
 
         # Convert any np.float type objects to float
-        if query_vector and isinstance(query_vector[0], np.number):
-            query_vector = [float(x) for x in query_vector]
+        if embedding and isinstance(embedding[0], np.number):
+            embedding = [float(x) for x in embedding]
 
         query_parameters = query_parameters or QueryParameters()
         btql_query, params, params_type = self._prepare_btql_query(
-            query_vector, k, query_parameters
+            embedding, k, query_parameters
         )
         try:
             results = []
@@ -1060,27 +1114,34 @@ class AsyncBigtableVectorStore(VectorStore):
             document and its distance score.
         """
         final_query_params = self._get_query_params(query_parameters, **kwargs)
+
+        # Execute the vector search query against Bigtable to get the raw results.
         results = await self.query_vector_store(
             embedding, k, query_parameters=final_query_params
         )
+
         docs_with_scores = []
         for res in results:
-            res_selected_cols = []
+            # Get a list of all columns returned in the result for checking existence.
+            res_selected_cols = [col[0] for col in res.fields]
 
-            for col in res.fields:
-                res_selected_cols.append(col[0])
+            # Reconstruct the metadata dictionary by iterating through the defined mappings
+            # and decoding the value for any existing metadata columns.
             metadata = {}
-            for mapping in self.metadata_mappings:
-                if mapping.metadata_key in res_selected_cols:
-                    metadata[mapping.metadata_key] = self._decode_value(
-                        res[mapping.metadata_key], mapping.encoding
-                    )
+            if self.metadata_mappings:
+                for mapping in self.metadata_mappings:
+                    if mapping.metadata_key in res_selected_cols:
+                        metadata[mapping.metadata_key] = self._decode_value(
+                            res[mapping.metadata_key], mapping.encoding
+                        )
 
+            # Extract and clean the document's original ID from the Bigtable row key.
             doc_id = res["_key"]
             doc_id = doc_id.decode("utf-8") if isinstance(doc_id, bytes) else doc_id
             if self.collection:
                 doc_id = doc_id.replace(f"{self.collection}:", "")
 
+            # Create the final LangChain Document object from the decoded content and metadata.
             doc = Document(
                 id=doc_id,
                 page_content=self._decode_value(
@@ -1088,7 +1149,9 @@ class AsyncBigtableVectorStore(VectorStore):
                 ),
                 metadata=metadata,
             )
+
             docs_with_scores.append((doc, res["distance"]))
+
         return docs_with_scores
 
     async def asimilarity_search_with_relevance_scores(
@@ -1177,11 +1240,10 @@ class AsyncBigtableVectorStore(VectorStore):
         Returns:
             List[Document]: A list of documents selected by MMR.
         """
-        query_vector = embedding
         documents = [
             doc
             for doc, score in await self.amax_marginal_relevance_search_with_score_by_vector(
-                query_vector,
+                embedding,
                 k=k,
                 fetch_k=fetch_k,
                 lambda_mult=lambda_mult,
@@ -1213,22 +1275,33 @@ class AsyncBigtableVectorStore(VectorStore):
         Returns:
             list[tuple[Document, float]]: A list of tuples containing a document
             and its distance score.
+
+        Raises:
+            ValueError is fetch_k is less than k.
         """
+        # Ensure that the number of documents to fetch is at least as large as the number to return.
+        if fetch_k < k:
+            raise ValueError("Argument 'fetch_k' can't be less than 'k'.")
+
+        # Resolve the final query parameters, combining any direct and keyword filters.
         query_parameters = self._get_query_params(query_parameters, **kwargs)
+
+        # Fetch a larger set of potentially relevant documents (fetch_k) from Bigtable.
         fetch_k_results = await self.query_vector_store(
             embedding,
             k=fetch_k,
             query_parameters=query_parameters,
         )
-        embedding_list = []
 
+        # Extract the embedding vectors from the initial results for the MMR calculation.
+        embedding_list = []
         for res in fetch_k_results:
-            # Convert bytes to embeddings list
             embeddings = self._bytes_to_embeddings(
                 res["embedding"], self.embedding_column.encoding
             )
             embedding_list.append(embeddings)
 
+        # Run the MMR algorithm to select the best k indices that balance relevance and diversity.
         mmr_selected_indices = utils.maximal_marginal_relevance(
             np.array(embedding, dtype=np.float32),
             embedding_list,
@@ -1238,25 +1311,27 @@ class AsyncBigtableVectorStore(VectorStore):
 
         results = []
         for i, result in enumerate(fetch_k_results):
-            # Take only the rows selected by MMR
+            # Process only the rows corresponding to the indices selected for maximal marginal relevance.
             if i in mmr_selected_indices:
                 distance = result["distance"]
 
+                # Reconstruct the metadata dictionary from the result's columns.
                 metadata = {}
-                res_selected_cols = []
+                res_selected_cols = [col[0] for col in result.fields]
+                if self.metadata_mappings:
+                    for mapping in self.metadata_mappings:
+                        if mapping.metadata_key in res_selected_cols:
+                            metadata[mapping.metadata_key] = self._decode_value(
+                                result[mapping.metadata_key], mapping.encoding
+                            )
 
-                for col in result.fields:
-                    res_selected_cols.append(col[0])
-                for mapping in self.metadata_mappings:
-                    if mapping.metadata_key in res_selected_cols:
-                        metadata[mapping.metadata_key] = self._decode_value(
-                            result[mapping.metadata_key], mapping.encoding
-                        )
-
+                # Decode and clean the document ID from the Bigtable row key.
                 doc_id = result["_key"]
                 doc_id = doc_id.decode("utf-8") if isinstance(doc_id, bytes) else doc_id
                 if self.collection:
                     doc_id = doc_id.replace(f"{self.collection}:", "")
+
+                # Create the final LangChain Document object.
                 document = Document(
                     id=doc_id,
                     page_content=self._decode_value(
@@ -1264,6 +1339,7 @@ class AsyncBigtableVectorStore(VectorStore):
                     ),
                     metadata=metadata,
                 )
+
                 results.append((document, distance))
         return results
 

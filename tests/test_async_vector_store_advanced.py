@@ -40,11 +40,16 @@ from langchain_google_bigtable.async_vector_store import (
     VectorDataType,
 )
 
-TEST_ROW_PREFIX = "pytest-advanced-vstore-"
+TEST_ROW_PREFIX = "pytest-advanced-vstore-1-"
 CONTENT_COLUMN_FAMILY = "content-cf"
 EMBEDDING_COLUMN_FAMILY = "embedding-cf"
 METADATA_COLUMN_FAMILY = "md"
 VECTOR_SIZE = 3
+
+# Use a deterministic fake embedding service for consistent test results.
+# It hashes the input text to create a seed, ensuring that the same
+# text will always produce the same embedding vector.
+embedding_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 
 def get_env_var(key: str, desc: str) -> str:
@@ -111,7 +116,6 @@ class TestAdvancedFeatures:
         dynamic_table_id: str,
     ) -> AsyncIterator[AsyncBigtableVectorStore]:
         table = async_data_client.get_table(instance_id, dynamic_table_id)
-        embedding_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
         vector_store = AsyncBigtableVectorStore(
             client=async_data_client,
             instance_id=instance_id,
@@ -146,7 +150,6 @@ class TestAdvancedFeatures:
         dynamic_table_id: str,
     ) -> AsyncIterator[AsyncBigtableVectorStore]:
         table = async_data_client.get_table(instance_id, dynamic_table_id)
-        embedding_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
         vector_store = AsyncBigtableVectorStore(
             client=async_data_client,
             instance_id=instance_id,
@@ -183,7 +186,6 @@ class TestAdvancedFeatures:
         dynamic_table_id: str,
     ) -> AsyncIterator[AsyncBigtableVectorStore]:
         table = async_data_client.get_table(instance_id, dynamic_table_id)
-        embedding_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
         vector_store = AsyncBigtableVectorStore(
             client=async_data_client,
             instance_id=instance_id,
@@ -353,51 +355,6 @@ class TestAdvancedFeatures:
         # Clean up
         await store.adelete(added_doc_ids)
 
-    async def test_filtering_with_no_collection_store(
-        self,
-        async_data_client: BigtableDataClientAsync,
-        instance_id: str,
-        dynamic_table_id: str,
-    ) -> None:
-        """Tests filtering when the store is initialized with no default collection."""
-        table = async_data_client.get_table(instance_id, dynamic_table_id)
-        embedding_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
-        store_no_collection = AsyncBigtableVectorStore(
-            client=async_data_client,
-            instance_id=instance_id,
-            async_table=table,
-            embedding_service=embedding_service,
-            content_column=ColumnConfig(CONTENT_COLUMN_FAMILY, "content"),
-            embedding_column=ColumnConfig(EMBEDDING_COLUMN_FAMILY, "embedding"),
-            metadata_mappings=[],
-            collection=None,
-        )
-        ids_to_add = [
-            f"{TEST_ROW_PREFIX}:coll-a-doc1",
-            f"{TEST_ROW_PREFIX}:coll-a-doc2",
-            f"{TEST_ROW_PREFIX}:coll-b-doc3",
-        ]
-        await store_no_collection.aadd_texts(
-            ["doc A1", "doc A2", "doc B3"], ids=ids_to_add
-        )
-
-        results_all = await store_no_collection.asimilarity_search("any doc", k=3)
-        assert len(results_all) == 3
-        assert {"doc A1", "doc A2", "doc B3"} == {
-            doc.page_content for doc in results_all
-        }
-
-        query_params = QueryParameters(
-            filters={"collectionFilter": f"{TEST_ROW_PREFIX}:coll-a-"}
-        )
-        results_filtered = await store_no_collection.asimilarity_search(
-            "any doc", k=3, query_parameters=query_params
-        )
-        assert len(results_filtered) == 2
-        assert {"doc A1", "doc A2"} == {doc.page_content for doc in results_filtered}
-        if ids_to_add:
-            await store_no_collection.adelete(ids_to_add)
-
     async def test_filtering_exact_match(self, store: AsyncBigtableVectorStore) -> None:
         """Tests filtering with an exact match (==)."""
         added_doc_ids = await store.aadd_texts(
@@ -475,7 +432,7 @@ class TestAdvancedFeatures:
     async def test_filtering_nested_chain(
         self, store: AsyncBigtableVectorStore
     ) -> None:
-        """Tests filtering with nested AND conditions (QualifierChainFilter)."""
+        """Tests filtering with nested AND conditions (ColumnValueChainFilter)."""
         added_doc_ids = await store.aadd_texts(
             ["good red", "bad red", "good blue"],
             metadatas=[
@@ -487,7 +444,7 @@ class TestAdvancedFeatures:
         query_params = QueryParameters(
             filters={
                 "metadataFilter": {
-                    "QualifierChainFilter": {
+                    "ColumnValueChainFilter": {
                         "color": {"==": "red"},
                         "is_good": {"==": True},
                     }
@@ -506,14 +463,16 @@ class TestAdvancedFeatures:
     async def test_filtering_nested_union(
         self, store: AsyncBigtableVectorStore
     ) -> None:
-        """Tests filtering with nested OR conditions (QualifierUnionFilter)."""
+        """Tests filtering with nested OR conditions (ColumnValueUnionFilter)."""
         added_doc_ids = await store.aadd_texts(
             ["item 1", "item 2", "item 3"],
             metadatas=[{"number": 1}, {"number": 2}, {"number": 3}],
         )
         query_params = QueryParameters(
             filters={
-                "metadataFilter": {"QualifierUnionFilter": {"number": {"<": 2, ">": 2}}}
+                "metadataFilter": {
+                    "ColumnValueUnionFilter": {"number": {"<": 2, ">": 2}}
+                }
             }
         )
         results = await store.asimilarity_search_by_vector(
@@ -550,8 +509,8 @@ class TestAdvancedFeatures:
         query_params = QueryParameters(
             filters={
                 "metadataFilter": {
-                    "QualifierUnionFilter": {
-                        "QualifierChainFilter": {
+                    "ColumnValueUnionFilter": {
+                        "ColumnValueChainFilter": {
                             "color": {"==": "red"},
                             "is_good": {"==": True},
                         },
@@ -566,6 +525,7 @@ class TestAdvancedFeatures:
         assert len(results) == 3
         assert {"A", "D", "E"} == {doc.page_content for doc in results}
 
+        print(added_doc_ids)
         # Clean up
         await store.adelete(added_doc_ids)
 
@@ -612,7 +572,7 @@ class TestAdvancedFeatures:
         assert sim_results[0].metadata["color"] == "blue"
 
         sim_results_score = await store_with_json.asimilarity_search_with_score(
-            query, k=1, lambda_mult=0.4
+            query, k=1
         )
         assert len(sim_results_score) == 1
         doc, score = sim_results_score[0]
@@ -692,7 +652,6 @@ class TestAdvancedFeatures:
     ) -> None:
         """Tests a DOUBLE64 vector search."""
         table = async_data_client.get_table(instance_id, dynamic_table_id)
-        embedding_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
         store_double_encoding = AsyncBigtableVectorStore(
             client=async_data_client,
             instance_id=instance_id,
@@ -786,13 +745,12 @@ class TestAdvancedFeatures:
     ) -> None:
         """Tests edge cases and empty inputs on empty stores"""
 
-        local_embedding_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
         table = async_data_client.get_table(instance_id, dynamic_table_id)
         local_store = AsyncBigtableVectorStore(
             client=async_data_client,
             instance_id=instance_id,
             async_table=table,
-            embedding_service=local_embedding_service,
+            embedding_service=embedding_service,
             content_column=ColumnConfig("content-cf", "content"),
             embedding_column=ColumnConfig("embedding-cf", "embedding"),
             collection="empty-store-1",
@@ -807,14 +765,18 @@ class TestAdvancedFeatures:
 
     async def test_filtering_no_results(self, store: AsyncBigtableVectorStore) -> None:
         """Tests that a filter returning no results behaves correctly."""
-        await store.aadd_texts(["item 1"], metadatas=[{"color": "red"}])
+        added_doc_ids = await store.aadd_texts(["item 1"], metadatas=[{"color": "red"}])
         query_params = QueryParameters(
             filters={"metadataFilter": {"color": {"==": "blue"}}}
         )
         results = await store.asimilarity_search(
             "item 1", k=1, query_parameters=query_params
         )
+        print(results)
         assert len(results) == 0
+
+        # Clean Up
+        await store.adelete(added_doc_ids)
 
     async def test_invalid_metadata_type_on_add(
         self, store: AsyncBigtableVectorStore

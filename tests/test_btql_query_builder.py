@@ -16,7 +16,6 @@ import struct
 from unittest.mock import Mock
 
 import pytest
-
 from langchain_google_bigtable.async_vector_store import (
     AsyncBigtableVectorStore,
     ColumnConfig,
@@ -83,12 +82,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( md['color'] = @eq_0 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['color'] = @eq_1 ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["eq_0"] == b"red"
+        assert query_params["eq_1"] == b"red"
 
     def test_filter_not_equal(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '!=' (not equal) operator and INT_BIG_ENDIAN encoding."""
@@ -100,12 +99,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( md['number'] != @ne_0 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['number'] != @ne_1 ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["ne_0"] == struct.pack(">q", 50)
+        assert query_params["ne_1"] == struct.pack(">q", 50)
 
     def test_filter_greater_than(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '>' (greater than) operator and INT_BIG_ENDIAN encoding."""
@@ -117,12 +116,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( md['number'] > @gt_0 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['number'] > @gt_1 ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["gt_0"] == struct.pack(">q", 100)
+        assert query_params["gt_1"] == struct.pack(">q", 100)
 
     def test_filter_greater_than_or_equal(
         self, store: AsyncBigtableVectorStore
@@ -136,12 +135,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( md['rating'] >= @gte_0 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['rating'] >= @gte_1 ) ) "
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["gte_0"] == struct.pack(">f", 3.5)
+        assert query_params["gte_1"] == struct.pack(">f", 3.5)
 
     def test_filter_less_than(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '<' (less than) operator and INT_BIG_ENDIAN encoding."""
@@ -153,12 +152,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( md['number'] < @lt_0 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['number'] < @lt_1 ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["lt_0"] == struct.pack(">q", 10)
+        assert query_params["lt_1"] == struct.pack(">q", 10)
 
     def test_filter_less_than_or_equal(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '<=' (less than or equal) operator and FLOAT encoding."""
@@ -170,12 +169,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( md['rating'] <= @lte_0 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['rating'] <= @lte_1 ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["lte_0"] == struct.pack(">f", 4.9)
+        assert query_params["lte_1"] == struct.pack(">f", 4.9)
 
     def test_filter_in(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'in' operator and verifies correct encoding for multiple values."""
@@ -189,12 +188,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( md['color'] IN UNNEST(@in_0) ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['color'] IN UNNEST(@in_1) ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["in_0"] == [b"red", b"blue"]
+        assert query_params["in_1"] == [b"red", b"blue"]
 
     def test_filter_not_in(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'nin' (not in) operator and verifies correct encoding for multiple int values."""
@@ -208,12 +207,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( md['number'] NOT IN UNNEST(@nin_0) ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['number'] NOT IN UNNEST(@nin_1) ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["nin_0"] == [struct.pack(">q", i) for i in [1, 2, 3]]
+        assert query_params["nin_1"] == [struct.pack(">q", i) for i in [1, 2, 3]]
 
     def test_filter_contains(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'contains' string operator."""
@@ -227,12 +226,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( STRPOS(md['color'], @contains_0) > 0 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( STRPOS(md['color'], @contains_1) > 0 ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["contains_0"] == b"gree"
+        assert query_params["contains_1"] == b"gree"
 
     def test_filter_like(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'like' (regex) operator."""
@@ -246,12 +245,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( REGEXP_CONTAINS(SAFE_CONVERT_BYTES_TO_STRING(md['color']), @like_0) ) ) "
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( REGEXP_CONTAINS(SAFE_CONVERT_BYTES_TO_STRING(md['color']), @like_1) ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["like_0"] == "bl.e"
+        assert query_params["like_1"] == "bl.e"
 
     def test_filter_qualifiers_exist(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'Qualifiers' filter to check for column existence."""
@@ -265,14 +264,12 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = (
-            "WHERE  (ARRAY_INCLUDES_ALL(MAP_KEYS(md), @qualifiers_0))"
-        )
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND  (ARRAY_INCLUDES_ALL(MAP_KEYS(md), @qualifiers_1))"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["qualifiers_0"] == [b"color", b"rating"]
+        assert query_params["qualifiers_1"] == [b"color", b"rating"]
 
     def test_query_with_collection_and_metadata_filter(
         self, store: AsyncBigtableVectorStore
@@ -296,11 +293,11 @@ class TestPrepareBtqlQuery:
         assert query_params["gte_1"] == struct.pack(">q", 42)
 
     def test_filter_chain(self, store: AsyncBigtableVectorStore) -> None:
-        """Tests a simple 'QualifierChainFilter' (AND) and verifies parameter values."""
+        """Tests a simple 'ColumnValueChainFilter' (AND) and verifies parameter values."""
         params = QueryParameters(
             filters={
                 "metadataFilter": {
-                    "QualifierChainFilter": {
+                    "ColumnValueChainFilter": {
                         "color": {"==": "blue"},
                         "is_good": {"==": True},
                     }
@@ -313,22 +310,23 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = (
-            "WHERE   ( ( ( md['color'] = @eq_0 ) AND  ( md['is_good'] = @eq_1 ) ) )"
-        )
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( ( md['color'] = @eq_1 )  AND   ( md['is_good'] = @eq_2 ) ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["eq_0"] == b"blue"
-        assert query_params["eq_1"] == struct.pack("?", True)
+        assert query_params["eq_1"] == b"blue"
+        assert query_params["eq_2"] == struct.pack("?", True)
 
     def test_filter_union(self, store: AsyncBigtableVectorStore) -> None:
-        """Tests a simple 'QualifierUnionFilter' (OR) and verifies parameter values."""
+        """Tests a simple 'ColumnValueUnionFilter' (OR) and verifies parameter values."""
         params = QueryParameters(
             filters={
                 "metadataFilter": {
-                    "QualifierUnionFilter": {"number": {"<": 10}, "rating": {">": 4.9}}
+                    "ColumnValueUnionFilter": {
+                        "number": {"<": 10},
+                        "rating": {">": 4.9},
+                    }
                 }
             }
         )
@@ -338,23 +336,21 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = (
-            "WHERE   ( ( ( md['number'] < @lt_0 ) OR  ( md['rating'] > @gt_1 ) ) )"
-        )
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( ( md['number'] < @lt_1 )  OR   ( md['rating'] > @gt_2 ) ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["lt_0"] == struct.pack(">q", 10)
-        assert query_params["gt_1"] == struct.pack(">f", 4.9)
+        assert query_params["lt_1"] == struct.pack(">q", 10)
+        assert query_params["gt_2"] == struct.pack(">f", 4.9)
 
     def test_filter_chain_in_union(self, store: AsyncBigtableVectorStore) -> None:
         """Tests a complex nested filter: (A AND B) OR C."""
         params = QueryParameters(
             filters={
                 "metadataFilter": {
-                    "QualifierUnionFilter": {
-                        "QualifierChainFilter": {
+                    "ColumnValueUnionFilter": {
+                        "ColumnValueChainFilter": {
                             "color": {"==": "red"},
                             "is_good": {"==": True},
                         },
@@ -369,23 +365,23 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces and new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( ( ( md['color'] = @eq_0 ) AND  ( md['is_good'] = @eq_1 ) ) OR  ( md['number'] > @gt_2 ) ) ) "
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( ( ( md['color'] = @eq_1 )  AND   ( md['is_good'] = @eq_2 ) )  OR   ( md['number'] > @gt_3 ) ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["eq_0"] == b"red"
-        assert query_params["eq_1"] == struct.pack("?", True)
-        assert query_params["gt_2"] == struct.pack(">q", 100)
+        assert query_params["eq_1"] == b"red"
+        assert query_params["eq_2"] == struct.pack("?", True)
+        assert query_params["gt_3"] == struct.pack(">q", 100)
 
     def test_filter_union_in_chain(self, store: AsyncBigtableVectorStore) -> None:
         """Tests a complex nested filter: A AND (B OR C)."""
         params = QueryParameters(
             filters={
                 "metadataFilter": {
-                    "QualifierChainFilter": {
+                    "ColumnValueChainFilter": {
                         "color": {"==": "green"},
-                        "QualifierUnionFilter": {
+                        "ColumnValueUnionFilter": {
                             "number": {"<": 5},
                             "is_good": {"==": False},
                         },
@@ -400,11 +396,11 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces and new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE   ( ( ( md['color'] = @eq_0 ) AND  ( ( md['number'] < @lt_1 ) OR  ( md['is_good'] = @eq_2 ) ) ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( ( md['color'] = @eq_1 )  AND   ( ( md['number'] < @lt_2 )  OR   ( md['is_good'] = @eq_3 ) ) ) )"
 
         assert expected_where_clause in btql_removed
 
         # Assert the placeholder values are correctly encoded
-        assert query_params["eq_0"] == b"green"
-        assert query_params["lt_1"] == struct.pack(">q", 5)
-        assert query_params["eq_2"] == struct.pack("?", False)
+        assert query_params["eq_1"] == b"green"
+        assert query_params["lt_2"] == struct.pack(">q", 5)
+        assert query_params["eq_3"] == struct.pack("?", False)

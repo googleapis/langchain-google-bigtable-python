@@ -43,6 +43,11 @@ EMBEDDING_COLUMN_FAMILY = "embedding-cf"
 METADATA_COLUMN_FAMILY = "md"
 VECTOR_SIZE = 3
 
+# Use a deterministic fake embedding service for consistent test results.
+# It hashes the input text to create a seed, ensuring that the same
+# text will always produce the same embedding vector.
+embedding_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
+
 
 def get_env_var(key: str, desc: str) -> str:
     v = os.environ.get(key)
@@ -108,7 +113,6 @@ class TestCoreFunctionality:
         dynamic_table_id: str,
     ) -> AsyncIterator[AsyncBigtableVectorStore]:
         table = async_data_client.get_table(instance_id, dynamic_table_id)
-        embedding_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
         vector_store = AsyncBigtableVectorStore(
             client=async_data_client,
             instance_id=instance_id,
@@ -224,8 +228,12 @@ class TestCoreFunctionality:
         """Tests amax_marginal_relevance_search returns the correct top result."""
         texts = ["foo", "bar", "baz", "boo"]
         added_doc_ids = await store.aadd_texts(texts)
-        results = await store.amax_marginal_relevance_search("bar")
+        results = await store.amax_marginal_relevance_search("bar", lambda_mult=0.1)
         assert results[0].page_content == "bar"
+
+        # Check if Value Error is raised when fetch_k is greater than k.
+        with pytest.raises(ValueError):
+            res = await store.amax_marginal_relevance_search("baz", fetch_k=10, k=20)
 
         # Clean up
         await store.adelete(added_doc_ids)
