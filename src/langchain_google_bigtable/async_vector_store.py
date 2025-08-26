@@ -978,7 +978,6 @@ class AsyncBigtableVectorStore(VectorStore):
                 LIMIT 
                     {k};
         """
-        print(btql_query)
         return btql_query, params, params_type
 
     async def query_vector_store(

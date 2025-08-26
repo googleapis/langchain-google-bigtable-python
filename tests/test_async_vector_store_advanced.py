@@ -537,7 +537,6 @@ class TestAdvancedFeatures:
         assert len(results) == 3
         assert {"A", "D", "E"} == {doc.page_content for doc in results}
 
-        print(added_doc_ids)
         # Clean up
         await store.adelete(added_doc_ids)
 
@@ -796,7 +795,7 @@ class TestAdvancedFeatures:
         results = await store.asimilarity_search(
             "item 1", k=1, query_parameters=query_params
         )
-        print(results)
+
         assert len(results) == 0
 
         # Clean Up
