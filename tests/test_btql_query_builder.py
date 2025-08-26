@@ -16,6 +16,7 @@ import struct
 from unittest.mock import Mock
 
 import pytest
+
 from langchain_google_bigtable.async_vector_store import (
     AsyncBigtableVectorStore,
     ColumnConfig,
@@ -44,8 +45,10 @@ class TestPrepareBtqlQuery:
             instance_id=MOCK_INSTANCE_ID,
             async_table=MOCK_TABLE,
             embedding_service=MOCK_EMBEDDING_SERVICE,
-            content_column=ColumnConfig("cf", "content"),
-            embedding_column=ColumnConfig("cf", "embedding"),
+            content_column=ColumnConfig(column_family="cf", column_qualifier="content"),
+            embedding_column=ColumnConfig(
+                column_family="cf", column_qualifier="embedding"
+            ),
             metadata_mappings=[
                 MetadataMapping("color", Encoding.UTF8),
                 MetadataMapping("is_good", Encoding.BOOL),

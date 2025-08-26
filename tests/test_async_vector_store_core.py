@@ -118,8 +118,12 @@ class TestCoreFunctionality:
             instance_id=instance_id,
             async_table=table,
             embedding_service=embedding_service,
-            content_column=ColumnConfig(CONTENT_COLUMN_FAMILY, "content"),
-            embedding_column=ColumnConfig(EMBEDDING_COLUMN_FAMILY, "embedding"),
+            content_column=ColumnConfig(
+                column_family=CONTENT_COLUMN_FAMILY, column_qualifier="content"
+            ),
+            embedding_column=ColumnConfig(
+                EMBEDDING_COLUMN_FAMILY, column_qualifier="embedding"
+            ),
             metadata_mappings=[
                 MetadataMapping("color", Encoding.UTF8),
                 MetadataMapping("number", Encoding.INT_BIG_ENDIAN),

@@ -121,8 +121,12 @@ class TestAdvancedFeatures:
             instance_id=instance_id,
             async_table=table,
             embedding_service=embedding_service,
-            content_column=ColumnConfig(CONTENT_COLUMN_FAMILY, "content"),
-            embedding_column=ColumnConfig(EMBEDDING_COLUMN_FAMILY, "embedding"),
+            content_column=ColumnConfig(
+                column_family=CONTENT_COLUMN_FAMILY, column_qualifier="content"
+            ),
+            embedding_column=ColumnConfig(
+                column_family=EMBEDDING_COLUMN_FAMILY, column_qualifier="embedding"
+            ),
             metadata_mappings=[
                 MetadataMapping("color", Encoding.UTF8),
                 MetadataMapping("number", Encoding.INT_BIG_ENDIAN),
@@ -155,10 +159,14 @@ class TestAdvancedFeatures:
             instance_id=instance_id,
             async_table=table,
             embedding_service=embedding_service,
-            content_column=ColumnConfig(CONTENT_COLUMN_FAMILY, "content"),
-            embedding_column=ColumnConfig(EMBEDDING_COLUMN_FAMILY, "embedding"),
+            content_column=ColumnConfig(
+                column_family=CONTENT_COLUMN_FAMILY, column_qualifier="content"
+            ),
+            embedding_column=ColumnConfig(
+                column_family=EMBEDDING_COLUMN_FAMILY, column_qualifier="embedding"
+            ),
             metadata_as_json_column=ColumnConfig(
-                METADATA_COLUMN_FAMILY, "metadata_json"
+                column_family=METADATA_COLUMN_FAMILY, column_qualifier="metadata_json"
             ),
             metadata_mappings=[
                 MetadataMapping("color", Encoding.UTF8),
@@ -191,8 +199,12 @@ class TestAdvancedFeatures:
             instance_id=instance_id,
             async_table=table,
             embedding_service=embedding_service,
-            content_column=ColumnConfig(CONTENT_COLUMN_FAMILY, "content"),
-            embedding_column=ColumnConfig(EMBEDDING_COLUMN_FAMILY, "embedding"),
+            content_column=ColumnConfig(
+                column_family=CONTENT_COLUMN_FAMILY, column_qualifier="content"
+            ),
+            embedding_column=ColumnConfig(
+                column_family=EMBEDDING_COLUMN_FAMILY, column_qualifier="embedding"
+            ),
             metadata_mappings=[
                 MetadataMapping("md_utf8", Encoding.UTF8),
                 MetadataMapping("md_utf16", Encoding.UTF16),
@@ -657,9 +669,13 @@ class TestAdvancedFeatures:
             instance_id=instance_id,
             async_table=table,
             embedding_service=embedding_service,
-            content_column=ColumnConfig("content-cf", "content"),
+            content_column=ColumnConfig(
+                column_family="content-cf", column_qualifier="content"
+            ),
             embedding_column=ColumnConfig(
-                "embedding-cf", "embedding", encoding=Encoding.DOUBLE
+                column_family="embedding-cf",
+                column_qualifier="embedding",
+                encoding=Encoding.DOUBLE,
             ),
             collection="pytest-async-vstore-",
         )
@@ -712,8 +728,12 @@ class TestAdvancedFeatures:
             instance_id=instance_id,
             async_table=table,
             embedding_service=local_embedding_service,
-            content_column=ColumnConfig("content-cf", "content"),
-            embedding_column=ColumnConfig("embedding-cf", "embedding"),
+            content_column=ColumnConfig(
+                column_family="content-cf", column_qualifier="content"
+            ),
+            embedding_column=ColumnConfig(
+                column_family="embedding-cf", column_qualifier="embedding"
+            ),
             collection="pytest-async-vstore-",
         )
         doc_ids = ["cosine_doc", "euclidean_doc"]
@@ -751,8 +771,12 @@ class TestAdvancedFeatures:
             instance_id=instance_id,
             async_table=table,
             embedding_service=embedding_service,
-            content_column=ColumnConfig("content-cf", "content"),
-            embedding_column=ColumnConfig("embedding-cf", "embedding"),
+            content_column=ColumnConfig(
+                column_family="content-cf", column_qualifier="content"
+            ),
+            embedding_column=ColumnConfig(
+                column_family="embedding-cf", column_qualifier="embedding"
+            ),
             collection="empty-store-1",
         )
 

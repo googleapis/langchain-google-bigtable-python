@@ -121,8 +121,8 @@ class ColumnConfig:
         encoding (Encoding): The data encoding to use for the column's value.
     """
 
-    column_family: str
     column_qualifier: str
+    column_family: str = METADATA_COLUMN_FAMILY
     encoding: Encoding = Encoding.UTF8
 
 
