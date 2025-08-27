@@ -450,7 +450,9 @@ class AsyncBigtableVectorStore(VectorStore):
         """
         # Ensure metadatas and ids are initialized; create empty dicts or UUIDs if not provided.
         metadatas = metadatas or [{} for _ in texts]
-        ids = ids or [str(uuid4()) for _ in texts]
+
+        if not ids:
+            ids = [str(uuid4()) for _ in texts]
 
         # Generate embeddings for all texts in a single batch call.
         doc_embeddings = await self.embedding_service.aembed_documents(list(texts))
@@ -470,6 +472,8 @@ class AsyncBigtableVectorStore(VectorStore):
                 embeddings = [float(x) for x in embeddings]
 
             # Construct the unique Bigtable row key, prefixing with the collection name.
+            if not doc_id:
+                doc_id = str(uuid4())
             row_key = f"{self.collection}:{doc_id}" if self.collection else doc_id
             added_doc_ids.append(doc_id)
 
