@@ -141,7 +141,7 @@ class TestBigtableVectorStoreSync:
         doc_ids = ["s_doc1"]
 
         # Sync methods
-        sync_store.add_documents(docs)
+        added_ids = sync_store.add_documents(docs)
         assert len(sync_store.get_by_ids(doc_ids)) == 1
         sync_store.delete(doc_ids)
         assert not sync_store.get_by_ids(doc_ids)
@@ -152,34 +152,104 @@ class TestBigtableVectorStoreSync:
         await sync_store.adelete(doc_ids)
         assert not await sync_store.aget_by_ids(doc_ids)
 
-    async def test_search_methods(self, sync_store: BigtableVectorStore) -> None:
-        """Tests all search variants on a sync-created store."""
-        texts = ["apple", "banana"]
-        added_ids = sync_store.add_texts(
-            texts, metadatas=[{"color": "red"}, {"color": "yellow"}]
-        )
-
-        # Basic search
-        assert len(sync_store.similarity_search("apple", k=1)) == 1
-        assert len(await sync_store.asimilarity_search("apple", k=1)) == 1
-
-        # Search with score
-        results_with_score = sync_store.similarity_search_with_score("banana", k=1)
-        assert len(results_with_score) == 1
-        assert results_with_score[0][0].page_content == "banana"
-
-        # Relevance score
-        results_relevance = sync_store.similarity_search_with_relevance_scores(
-            "apple", k=1
-        )
-        assert len(results_relevance) == 1
-        assert 0.0 <= results_relevance[0][1] <= 1.0
-
-        # MMR
-        assert len(sync_store.max_marginal_relevance_search("banana", k=1)) == 1
-        assert len(await sync_store.amax_marginal_relevance_search("banana", k=1)) == 1
-
+        # Clean Up
         sync_store.delete(added_ids)
+
+    async def test_similarity_search_methods(
+        self, sync_store: BigtableVectorStore
+    ) -> None:
+        """Tests standard similarity search methods."""
+        texts = ["apple", "banana", "cake", "kite"]
+        added_doc_ids = sync_store.add_texts(texts)
+        query = "apple"
+        embedding = sync_store.embedding_service.embed_query(query)
+
+        results_search = sync_store.search(query, search_type="similarity", k=2)
+        assert len(results_search) == 2
+        assert "apple" in [doc.page_content for doc in results_search]
+
+        results_sim = sync_store.similarity_search(query, k=2)
+        assert len(results_sim) == 2
+        assert "apple" in [doc.page_content for doc in results_sim]
+
+        results_sim_vec = sync_store.similarity_search_by_vector(embedding, k=2)
+        assert len(results_sim_vec) == 2
+        assert {doc.page_content for doc in results_sim} == {
+            doc.page_content for doc in results_sim_vec
+        }
+
+        results_score = sync_store.similarity_search_with_score(query, k=1)
+        assert len(results_score) == 1
+        doc, score = results_score[0]
+        assert doc.page_content == "apple"
+        assert isinstance(score, float)
+
+        # Clean up
+        sync_store.delete(added_doc_ids)
+
+    async def test_similarity_search_with_relevance_scores(
+        self, sync_store: BigtableVectorStore
+    ) -> None:
+        """Tests that relevance scores are returned correctly for different distance strategies."""
+        texts_to_add = ["a document about cats", "a document about dogs"]
+        added_doc_ids = sync_store.add_texts(texts_to_add)
+
+        query = "a document about cats"
+
+        results_cosine = sync_store.similarity_search_with_relevance_scores(query, k=1)
+
+        assert len(results_cosine) == 1
+        doc, score = results_cosine[0]
+        assert isinstance(doc, Document)
+        assert doc.page_content == "a document about cats"
+        assert isinstance(score, float)
+
+        query_params_euclidean = QueryParameters(
+            distance_strategy=DistanceStrategy.EUCLIDEAN
+        )
+        results_euclidean = sync_store.similarity_search_with_relevance_scores(
+            query, k=1, query_parameters=query_params_euclidean
+        )
+
+        assert len(results_euclidean) == 1
+        doc_euc, score_euc = results_euclidean[0]
+        assert isinstance(doc_euc, Document)
+        assert doc_euc.page_content == "a document about cats"
+        assert isinstance(score_euc, float)
+
+        # Clean up
+        sync_store.delete(added_doc_ids)
+
+    async def test_max_marginal_relevance_search(
+        self, sync_store: BigtableVectorStore
+    ) -> None:
+        """Tests max_marginal_relevance_search returns the correct top result."""
+        texts = ["foo", "bar", "baz", "boo"]
+        added_doc_ids = sync_store.add_texts(texts)
+        results = sync_store.max_marginal_relevance_search("bar", lambda_mult=0.1)
+        assert results[0].page_content == "bar"
+
+        # Check if Value Error is raised when fetch_k is greater than k.
+        with pytest.raises(ValueError):
+            res = await sync_store.max_marginal_relevance_search(
+                "baz", fetch_k=10, k=20
+            )
+
+        # Clean up
+        sync_store.delete(added_doc_ids)
+
+    async def test_max_marginal_relevance_search_by_vector(
+        self, sync_store: BigtableVectorStore
+    ) -> None:
+        """Tests max_marginal_relevance_search_by_vector returns the correct top result."""
+        texts = ["foo", "bar", "baz", "boo"]
+        added_doc_ids = sync_store.add_texts(texts)
+        embedding = sync_store.embedding_service.embed_query("bar")
+        results = sync_store.max_marginal_relevance_search_by_vector(embedding)
+        assert results[0].page_content == "bar"
+
+        # Clean up
+        sync_store.delete(added_doc_ids)
 
 
 @pytest.mark.asyncio
@@ -224,32 +294,105 @@ class TestBigtableVectorStoreAsync:
         async_store.delete(doc_ids)
         assert not async_store.get_by_ids(doc_ids)
 
-    async def test_search_methods(self, async_store: BigtableVectorStore) -> None:
-        """Tests all search variants on an async-created store."""
-        texts = ["carrot", "dragonfruit"]
-        added_ids = await async_store.aadd_texts(
-            texts, metadatas=[{"color": "orange"}, {"color": "pink"}]
+    async def test_asimilarity_search_methods(
+        self, async_store: BigtableVectorStore
+    ) -> None:
+        """Tests standard similarity search methods."""
+        texts = ["apple", "banana", "cake", "kite"]
+        added_doc_ids = await async_store.aadd_texts(texts)
+        query = "apple"
+        embedding = await async_store.embedding_service.aembed_query(query)
+
+        results_search = await async_store.asearch(query, search_type="similarity", k=2)
+        assert len(results_search) == 2
+        assert "apple" in [doc.page_content for doc in results_search]
+
+        results_sim = await async_store.asimilarity_search(query, k=2)
+        assert len(results_sim) == 2
+        assert "apple" in [doc.page_content for doc in results_sim]
+
+        results_sim_vec = await async_store.asimilarity_search_by_vector(embedding, k=2)
+        assert len(results_sim_vec) == 2
+        assert {doc.page_content for doc in results_sim} == {
+            doc.page_content for doc in results_sim_vec
+        }
+
+        results_score = await async_store.asimilarity_search_with_score(query, k=1)
+        assert len(results_score) == 1
+        doc, score = results_score[0]
+        assert doc.page_content == "apple"
+        assert isinstance(score, float)
+
+        # Clean up
+        await async_store.adelete(added_doc_ids)
+
+    async def test_asimilarity_search_with_relevance_scores(
+        self, async_store: BigtableVectorStore
+    ) -> None:
+        """Tests that relevance scores are returned correctly for different distance strategies."""
+        texts_to_add = ["a document about cats", "a document about dogs"]
+        added_doc_ids = await async_store.aadd_texts(texts_to_add)
+
+        query = "a document about cats"
+
+        results_cosine = await async_store.asimilarity_search_with_relevance_scores(
+            query, k=1
         )
 
-        # Basic search
-        assert len(await async_store.asimilarity_search("carrot", k=1)) == 1
-        assert len(async_store.similarity_search("carrot", k=1)) == 1
+        assert len(results_cosine) == 1
+        doc, score = results_cosine[0]
+        assert isinstance(doc, Document)
+        assert doc.page_content == "a document about cats"
+        assert isinstance(score, float)
 
-        # Search with score
-        results_with_score = await async_store.asimilarity_search_with_score(
-            "dragonfruit", k=1
+        query_params_euclidean = QueryParameters(
+            distance_strategy=DistanceStrategy.EUCLIDEAN
         )
-        assert len(results_with_score) == 1
-        assert results_with_score[0][0].page_content == "dragonfruit"
-
-        # MMR
-        assert (
-            len(await async_store.amax_marginal_relevance_search("dragonfruit", k=1))
-            == 1
+        results_euclidean = await async_store.asimilarity_search_with_relevance_scores(
+            query, k=1, query_parameters=query_params_euclidean
         )
-        assert len(async_store.max_marginal_relevance_search("dragonfruit", k=1)) == 1
 
-        await async_store.adelete(added_ids)
+        assert len(results_euclidean) == 1
+        doc_euc, score_euc = results_euclidean[0]
+        assert isinstance(doc_euc, Document)
+        assert doc_euc.page_content == "a document about cats"
+        assert isinstance(score_euc, float)
+
+        # Clean up
+        await async_store.adelete(added_doc_ids)
+
+    async def test_amax_marginal_relevance_search(
+        self, async_store: BigtableVectorStore
+    ) -> None:
+        """Tests amax_marginal_relevance_search returns the correct top result."""
+        texts = ["foo", "bar", "baz", "boo"]
+        added_doc_ids = await async_store.aadd_texts(texts)
+        results = await async_store.amax_marginal_relevance_search(
+            "bar", lambda_mult=0.1
+        )
+        assert results[0].page_content == "bar"
+
+        # Check if Value Error is raised when fetch_k is greater than k.
+        with pytest.raises(ValueError):
+            res = await async_store.amax_marginal_relevance_search(
+                "baz", fetch_k=10, k=20
+            )
+
+        # Clean up
+        await async_store.adelete(added_doc_ids)
+
+    async def test_max_marginal_relevance_search_by_vector(
+        self, async_store: BigtableVectorStore
+    ) -> None:
+        """Tests max_marginal_relevance_search_by_vector returns the correct top result."""
+        texts = ["foo", "bar", "baz", "boo"]
+        added_doc_ids = await async_store.aadd_texts(texts)
+        embedding = await async_store.embedding_service.aembed_query("bar")
+        results = await async_store.amax_marginal_relevance_search_by_vector(embedding)
+        assert results[0].page_content == "bar"
+
+        # Clean up
+        await async_store.adelete(added_doc_ids)
 
 
 @pytest.mark.asyncio
@@ -271,8 +414,8 @@ class TestAdvancedScenarios:
         texts = ["text content"]
         embedding = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
-        # Sync from_texts
-        text_store = BigtableVectorStore.from_texts(
+        # Async from_texts
+        async_text_store = await BigtableVectorStore.afrom_texts(
             texts,
             embedding,
             instance_id=instance_id,
@@ -281,13 +424,28 @@ class TestAdvancedScenarios:
             ids=["t1"],
             content_column=content_column,
             embedding_column=embedding_column,
-            collection="test_coll_from_texts",
+            collection="test_coll_from_texts_sync",
         )
-        assert len(text_store.get_by_ids(["t1"])) == 1
-        text_store.delete(["t1"])
+        assert len(await async_text_store.aget_by_ids(["t1"])) == 1
+        await async_text_store.adelete(["t1"])
+
+        # Sync from_texts
+        sync_text_store = BigtableVectorStore.from_texts(
+            texts,
+            embedding,
+            instance_id=instance_id,
+            table_id=managed_table,
+            engine=engine,
+            ids=["t1"],
+            content_column=content_column,
+            embedding_column=embedding_column,
+            collection="test_coll_from_texts_async",
+        )
+        assert len(sync_text_store.get_by_ids(["t1"])) == 1
+        sync_text_store.delete(["t1"])
 
         # Async from_documents
-        doc_store = await BigtableVectorStore.afrom_documents(
+        async_doc_store = await BigtableVectorStore.afrom_documents(
             docs,
             embedding,
             instance_id=instance_id,
@@ -296,10 +454,25 @@ class TestAdvancedScenarios:
             ids=["d1"],
             content_column=content_column,
             embedding_column=embedding_column,
-            collection="test_coll_from_docs",
+            collection="test_coll_from_docs_async",
         )
-        assert len(await doc_store.aget_by_ids(["d1"])) == 1
-        await doc_store.adelete(["d1"])
+        assert len(await async_doc_store.aget_by_ids(["d1"])) == 1
+        await async_doc_store.adelete(["d1"])
+
+        # Sync from_documents
+        sync_doc_store = BigtableVectorStore.from_documents(
+            docs,
+            embedding,
+            instance_id=instance_id,
+            table_id=managed_table,
+            engine=engine,
+            ids=["d1"],
+            content_column=content_column,
+            embedding_column=embedding_column,
+            collection="test_coll_from_docs_sync",
+        )
+        assert len(sync_doc_store.get_by_ids(["d1"])) == 1
+        sync_doc_store.delete(["d1"])
 
     async def test_filtering(
         self, engine: BigtableEngine, instance_id: str, managed_table: str

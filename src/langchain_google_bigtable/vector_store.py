@@ -596,56 +596,6 @@ class BigtableVectorStore(VectorStore):
         await self.engine._run_as_async(_internal())
         return True
 
-    def search(
-        self,
-        query: str,
-        search_type: str,
-        **kwargs: Any,
-    ) -> List[Document]:
-        """
-        Return docs most similar to query using specified search type.
-
-        Args:
-            query (str): Input text.
-            search_type (str): Type of search to perform. Can be "similarity", "mmr",
-                               or "similarity_score_threshold".
-            **kwargs (Any): Keyword arguments to pass to the search function.
-
-        Returns:
-            (List[Document]): A list of documents most similar to the query.
-        """
-
-        async def _internal() -> List[Document]:
-            store = await self._get_async_store()
-            return await store.asearch(query, search_type, **kwargs)
-
-        return self.engine._run_as_sync(_internal())
-
-    async def asearch(
-        self,
-        query: str,
-        search_type: str,
-        **kwargs: Any,
-    ) -> List[Document]:
-        """
-        Return docs most similar to query using specified search type.
-
-        Args:
-            query (str): Input text.
-            search_type (str): Type of search to perform. Can be "similarity", "mmr",
-                               or "similarity_score_threshold".
-            **kwargs (Any): Keyword arguments to pass to the search function.
-
-        Returns:
-            (List[Document]): A list of documents most similar to the query.
-        """
-
-        async def _internal() -> List[Document]:
-            store = await self._get_async_store()
-            return await store.asearch(query, search_type, **kwargs)
-
-        return await self.engine._run_as_async(_internal())
-
     def similarity_search(
         self,
         query: str,
