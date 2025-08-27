@@ -77,7 +77,9 @@ class TestPrepareBtqlQuery:
 
     def test_filter_equal(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '==' (equal) operator and verifies UTF8 encoding."""
-        params = QueryParameters(filters={"color": {"==": "red"}})
+        params = QueryParameters(
+            filters={"ColumnValueFilter": {"color": {"==": "red"}}}
+        )
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -96,7 +98,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_not_equal(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '!=' (not equal) operator and INT_BIG_ENDIAN encoding."""
-        params = QueryParameters(filters={"number": {"!=": 50}})
+        params = QueryParameters(filters={"ColumnValueFilter": {"number": {"!=": 50}}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -113,7 +115,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_greater_than(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '>' (greater than) operator and INT_BIG_ENDIAN encoding."""
-        params = QueryParameters(filters={"number": {">": 100}})
+        params = QueryParameters(filters={"ColumnValueFilter": {"number": {">": 100}}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -134,7 +136,7 @@ class TestPrepareBtqlQuery:
         self, store: AsyncBigtableVectorStore
     ) -> None:
         """Tests the '>=' (greater than or equal) operator and FLOAT encoding."""
-        params = QueryParameters(filters={"rating": {">=": 3.5}})
+        params = QueryParameters(filters={"ColumnValueFilter": {"rating": {">=": 3.5}}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -151,7 +153,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_less_than(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '<' (less than) operator and INT_BIG_ENDIAN encoding."""
-        params = QueryParameters(filters={"number": {"<": 10}})
+        params = QueryParameters(filters={"ColumnValueFilter": {"number": {"<": 10}}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -170,7 +172,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_less_than_or_equal(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '<=' (less than or equal) operator and FLOAT encoding."""
-        params = QueryParameters(filters={"rating": {"<=": 4.9}})
+        params = QueryParameters(filters={"ColumnValueFilter": {"rating": {"<=": 4.9}}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -187,7 +189,9 @@ class TestPrepareBtqlQuery:
 
     def test_filter_in(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'in' operator and verifies correct encoding for multiple values."""
-        params = QueryParameters(filters={"color": {"in": ["red", "blue"]}})
+        params = QueryParameters(
+            filters={"ColumnValueFilter": {"color": {"in": ["red", "blue"]}}}
+        )
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -204,7 +208,9 @@ class TestPrepareBtqlQuery:
 
     def test_filter_not_in(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'nin' (not in) operator and verifies correct encoding for multiple int values."""
-        params = QueryParameters(filters={"number": {"nin": [1, 2, 3]}})
+        params = QueryParameters(
+            filters={"ColumnValueFilter": {"number": {"nin": [1, 2, 3]}}}
+        )
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -221,7 +227,9 @@ class TestPrepareBtqlQuery:
 
     def test_filter_contains(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'contains' string operator."""
-        params = QueryParameters(filters={"color": {"contains": "gree"}})
+        params = QueryParameters(
+            filters={"ColumnValueFilter": {"color": {"contains": "gree"}}}
+        )
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -238,7 +246,9 @@ class TestPrepareBtqlQuery:
 
     def test_filter_like(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'like' (regex) operator."""
-        params = QueryParameters(filters={"color": {"like": "bl.e"}})
+        params = QueryParameters(
+            filters={"ColumnValueFilter": {"color": {"like": "bl.e"}}}
+        )
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -255,7 +265,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_qualifiers_exist(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'Qualifiers' filter to check for column existence."""
-        params = QueryParameters(filters={"Qualifiers": ["color", "rating"]})
+        params = QueryParameters(filters={"ColumnQualifiers": ["color", "rating"]})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -275,7 +285,7 @@ class TestPrepareBtqlQuery:
     ) -> None:
         """Tests combining a collection prefix with a metadata filter and verifies parameter values."""
         store.collection = "my-docs"
-        params = QueryParameters(filters={"number": {">=": 42}})
+        params = QueryParameters(filters={"ColumnValueFilter": {"number": {">=": 42}}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -295,9 +305,11 @@ class TestPrepareBtqlQuery:
         """Tests a simple 'ColumnValueChainFilter' (AND) and verifies parameter values."""
         params = QueryParameters(
             filters={
-                "ColumnValueChainFilter": {
-                    "color": {"==": "blue"},
-                    "is_good": {"==": True},
+                "ColumnValueFilter": {
+                    "ColumnValueChainFilter": {
+                        "color": {"==": "blue"},
+                        "is_good": {"==": True},
+                    }
                 }
             }
         )
@@ -319,9 +331,11 @@ class TestPrepareBtqlQuery:
         """Tests a simple 'ColumnValueUnionFilter' (OR) and verifies parameter values."""
         params = QueryParameters(
             filters={
-                "ColumnValueUnionFilter": {
-                    "number": {"<": 10},
-                    "rating": {">": 4.9},
+                "ColumnValueFilter": {
+                    "ColumnValueUnionFilter": {
+                        "number": {"<": 10},
+                        "rating": {">": 4.9},
+                    }
                 }
             }
         )
@@ -343,12 +357,14 @@ class TestPrepareBtqlQuery:
         """Tests a complex nested filter: (A AND B) OR C."""
         params = QueryParameters(
             filters={
-                "ColumnValueUnionFilter": {
-                    "ColumnValueChainFilter": {
-                        "color": {"==": "red"},
-                        "is_good": {"==": True},
-                    },
-                    "number": {">": 100},
+                "ColumnValueFilter": {
+                    "ColumnValueUnionFilter": {
+                        "ColumnValueChainFilter": {
+                            "color": {"==": "red"},
+                            "is_good": {"==": True},
+                        },
+                        "number": {">": 100},
+                    }
                 }
             }
         )
@@ -371,12 +387,14 @@ class TestPrepareBtqlQuery:
         """Tests a complex nested filter: A AND (B OR C)."""
         params = QueryParameters(
             filters={
-                "ColumnValueChainFilter": {
-                    "color": {"==": "green"},
-                    "ColumnValueUnionFilter": {
-                        "number": {"<": 5},
-                        "is_good": {"==": False},
-                    },
+                "ColumnValueFilter": {
+                    "ColumnValueChainFilter": {
+                        "color": {"==": "green"},
+                        "ColumnValueUnionFilter": {
+                            "number": {"<": 5},
+                            "is_good": {"==": False},
+                        },
+                    }
                 }
             }
         )
@@ -400,20 +418,22 @@ class TestPrepareBtqlQuery:
         self, store: AsyncBigtableVectorStore
     ) -> None:
         """
-        Tests a complex query combining rowKeyFilter, qualifier filters, value filters,
+        Tests a complex query combining RowKeyFilter, qualifier filters, value filters,
         and a nested logical filter (A AND (B OR C)).
         """
         store.collection = "complex-collection"
         params = QueryParameters(
             filters={
-                "rowKeyFilter": "group1/",
-                "Qualifiers": ["number", "color"],
-                "ColumnValueChainFilter": {
-                    "is_good": {"==": True},
-                    "ColumnValueUnionFilter": {
-                        "rating": {">=": 4.9},
-                        "color": {"==": "red"},
-                    },
+                "RowKeyFilter": "group1/",
+                "ColumnQualifiers": ["number", "color"],
+                "ColumnValueFilter": {
+                    "ColumnValueChainFilter": {
+                        "is_good": {"==": True},
+                        "ColumnValueUnionFilter": {
+                            "rating": {">=": 4.9},
+                            "color": {"==": "red"},
+                        },
+                    }
                 },
             }
         )

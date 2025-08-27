@@ -249,7 +249,9 @@ class TestAdvancedFeatures:
             ["item 10", "item 20", "item 30", "item 40"],
             metadatas=[{"number": n} for n in [10, 20, 30, 40]],
         )
-        query_params = QueryParameters(filters={"number": {operator: value}})
+        query_params = QueryParameters(
+            filters={"ColumnValueFilter": {"number": {operator: value}}}
+        )
         results = await store.asimilarity_search(
             "any", k=4, query_parameters=query_params
         )
@@ -267,14 +269,18 @@ class TestAdvancedFeatures:
             ["A regular item", "Another item", "A special thing"],
             metadatas=[{"color": c} for c in ["regular", "another", "special"]],
         )
-        query_params_like = QueryParameters(filters={"color": {"like": "reg.*"}})
+        query_params_like = QueryParameters(
+            filters={"ColumnValueFilter": {"color": {"like": "reg.*"}}}
+        )
         results_like = await store.asimilarity_search(
             "any", k=3, query_parameters=query_params_like
         )
         assert len(results_like) == 1
         assert results_like[0].page_content == "A regular item"
 
-        query_params_contains = QueryParameters(filters={"color": {"contains": "othe"}})
+        query_params_contains = QueryParameters(
+            filters={"ColumnValueFilter": {"color": {"contains": "othe"}}}
+        )
         results_contains = await store.asimilarity_search(
             "any", k=3, query_parameters=query_params_contains
         )
@@ -297,7 +303,7 @@ class TestAdvancedFeatures:
             ],
         )
         query_params_exist = QueryParameters(
-            filters={"Qualifiers": ["color", "number"]}
+            filters={"ColumnQualifiers": ["color", "number"]}
         )
         results_exist = await store.asimilarity_search(
             "any", k=3, query_parameters=query_params_exist
@@ -338,7 +344,7 @@ class TestAdvancedFeatures:
 
         row_key_prefix = "other/"
         query_params_override = QueryParameters(
-            filters={"rowKeyFilter": row_key_prefix}
+            filters={"RowKeyFilter": row_key_prefix}
         )
         results_override = await store.asimilarity_search(
             "any doc", k=3, query_parameters=query_params_override
@@ -347,7 +353,7 @@ class TestAdvancedFeatures:
         assert results_override[0].page_content == "doc-other-C"
 
         query_params_fail = QueryParameters(
-            filters={"rowKeyFilter": "non-existent-prefix"}
+            filters={"RowKeyFilter": "non-existent-prefix"}
         )
         results_fail = await store.asimilarity_search(
             "any doc", k=3, query_parameters=query_params_fail
@@ -367,7 +373,9 @@ class TestAdvancedFeatures:
                 {"color": "blue", "number": 3},
             ],
         )
-        query_params = QueryParameters(filters={"color": {"==": "blue"}})
+        query_params = QueryParameters(
+            filters={"ColumnValueFilter": {"color": {"==": "blue"}}}
+        )
         results = await store.asimilarity_search_by_vector(
             [1.0, 0.0, 0.0], k=3, query_parameters=query_params
         )
@@ -383,7 +391,9 @@ class TestAdvancedFeatures:
             ["item 10", "item 20", "item 30"],
             metadatas=[{"number": 10}, {"number": 20}, {"number": 30}],
         )
-        query_params = QueryParameters(filters={"number": {">=": 20}})
+        query_params = QueryParameters(
+            filters={"ColumnValueFilter": {"number": {">=": 20}}}
+        )
         results = await store.asimilarity_search_by_vector(
             [1.0, 0.0, 0.0], k=3, query_parameters=query_params
         )
@@ -406,7 +416,9 @@ class TestAdvancedFeatures:
                 {"color": "yellow"},
             ],
         )
-        query_params_in = QueryParameters(filters={"color": {"in": ["blue", "yellow"]}})
+        query_params_in = QueryParameters(
+            filters={"ColumnValueFilter": {"color": {"in": ["blue", "yellow"]}}}
+        )
         results_in = await store.asimilarity_search_by_vector(
             [1.0, 0.0, 0.0], k=4, query_parameters=query_params_in
         )
@@ -414,7 +426,7 @@ class TestAdvancedFeatures:
         assert {"blue", "yellow"} == {doc.page_content for doc in results_in}
 
         query_params_nin = QueryParameters(
-            filters={"color": {"nin": ["blue", "yellow"]}}
+            filters={"ColumnValueFilter": {"color": {"nin": ["blue", "yellow"]}}}
         )
         results_nin = await store.asimilarity_search_by_vector(
             [1.0, 0.0, 0.0], k=4, query_parameters=query_params_nin
@@ -439,9 +451,11 @@ class TestAdvancedFeatures:
         )
         query_params = QueryParameters(
             filters={
-                "ColumnValueChainFilter": {
-                    "color": {"==": "red"},
-                    "is_good": {"==": True},
+                "ColumnValueFilter": {
+                    "ColumnValueChainFilter": {
+                        "color": {"==": "red"},
+                        "is_good": {"==": True},
+                    }
                 }
             }
         )
@@ -458,7 +472,7 @@ class TestAdvancedFeatures:
         self, store: AsyncBigtableVectorStore
     ) -> None:
         """
-        Tests filtering by a combination of rowKeyFilter, multiple metadata value
+        Tests filtering by a combination of RowKeyFilter, multiple metadata value
         filters, and a qualifier filter simultaneously.
         """
         added_doc_ids = await store.aadd_texts(
@@ -486,11 +500,13 @@ class TestAdvancedFeatures:
 
         query_params = QueryParameters(
             filters={
-                "rowKeyFilter": "group1/",
-                "color": {"==": "blue"},
-                "is_good": {"==": True},
-                "rating": {">=": 4.9},
-                "Qualifiers": ["number", "color"],
+                "RowKeyFilter": "group1/",
+                "ColumnQualifiers": ["number", "color"],
+                "ColumnValueFilter": {
+                    "color": {"==": "blue"},
+                    "is_good": {"==": True},
+                    "rating": {">=": 4.9},
+                },
             }
         )
         results = await store.asimilarity_search(
@@ -512,7 +528,11 @@ class TestAdvancedFeatures:
             metadatas=[{"number": 1}, {"number": 2}, {"number": 3}],
         )
         query_params = QueryParameters(
-            filters={"ColumnValueUnionFilter": {"number": {"<": 2, ">": 2}}}
+            filters={
+                "ColumnValueFilter": {
+                    "ColumnValueUnionFilter": {"number": {"<": 2, ">": 2}}
+                }
+            }
         )
         results = await store.asimilarity_search_by_vector(
             [1.0, 0.0, 0.0], k=3, query_parameters=query_params
@@ -547,12 +567,14 @@ class TestAdvancedFeatures:
         )
         query_params = QueryParameters(
             filters={
-                "ColumnValueUnionFilter": {
-                    "ColumnValueChainFilter": {
-                        "color": {"==": "red"},
-                        "is_good": {"==": True},
-                    },
-                    "number": {">=": 10},
+                "ColumnValueFilter": {
+                    "ColumnValueUnionFilter": {
+                        "ColumnValueChainFilter": {
+                            "color": {"==": "red"},
+                            "is_good": {"==": True},
+                        },
+                        "number": {">=": 10},
+                    }
                 }
             }
         )
@@ -668,7 +690,9 @@ class TestAdvancedFeatures:
                 assert retrieved_metadata[key] == value
 
         for key, value in original_metadata.items():
-            query_params = QueryParameters(filters={key: {"==": value}})
+            query_params = QueryParameters(
+                filters={"ColumnValueFilter": {key: {"==": value}}}
+            )
             search_results = await store_all_encodings.asimilarity_search(
                 "any", k=1, query_parameters=query_params
             )
@@ -812,7 +836,9 @@ class TestAdvancedFeatures:
     async def test_filtering_no_results(self, store: AsyncBigtableVectorStore) -> None:
         """Tests that a filter returning no results behaves correctly."""
         added_doc_ids = await store.aadd_texts(["item 1"], metadatas=[{"color": "red"}])
-        query_params = QueryParameters(filters={"color": {"==": "blue"}})
+        query_params = QueryParameters(
+            filters={"ColumnValueFilter": {"color": {"==": "blue"}}}
+        )
         results = await store.asimilarity_search(
             "item 1", k=1, query_parameters=query_params
         )

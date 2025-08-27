@@ -66,27 +66,49 @@ METADATA_COLUMN_FAMILY = "md"
 DEFAULT_COLLECTION = "default_vectors"
 
 # The supported comparison operators for metadata value filters.
+# e.g., ">", "<=", "in", etc.
 OperatorType: TypeAlias = Literal[
     ">", "<", ">=", "<=", "==", "!=", "in", "nin", "contains", "like"
 ]
 
-# Represents a dictionary for a single value comparison,
+# Represents a dictionary for a single value comparison.
+# This defines the structure for a condition on a metadata field.
 # e.g., {"==": "blue"} or {">=": 42}. The value can be any comparable type.
 OperatorDict: TypeAlias = Dict[OperatorType, Any]
 
-# A forward reference is necessary because ValueFilterDict is used within its own definition.
+# A forward reference is necessary because ValueFilterDict is used within its own definition,
+# allowing for recursive nesting of logical filters.
 ValueFilterDict: TypeAlias
 
 # Represents the recursive structure for filtering on metadata values.
-# Keys can be a metadata field (e.g., "color"), or a logical filter
-# ("ColumnValueChainFilter" for AND, "ColumnValueUnionFilter" for OR)
-# which contains another ValueFilterDict.
+# Keys can be:
+# 1. A metadata field name (e.g., "color", "year").
+# 2. A logical filter operator ("ColumnValueChainFilter" for AND, "ColumnValueUnionFilter" for OR).
+# The values for metadata fields are OperatorDicts, while the values for logical
+# filters are another ValueFilterDict, enabling complex nested queries.
+# e.g., {"color": {"==": "blue"}, "year": {">": 2020}}
+# e.g., {"ColumnValueUnionFilter": {"genre": {"==": "sci-fi"}, "author": {"==": "Asimov"}}}
 ValueFilterDict = Dict[str, Union[OperatorDict, "ValueFilterDict"]]
 
-# Represents the top-level filter dictionary. It can contain a `rowKeyFilter`
-# to specify a row key prefix that follows the collection prefix by default.
-# It also supports high-level qualifier filters and nested value-based filters.
-FilterDict: TypeAlias = Dict[str, Union[str, List[str], OperatorDict, ValueFilterDict]]
+
+# Defines the allowed top-level keys in the main filter dictionary.
+# Using a Literal type here enforces a strict structure, improving clarity and
+# preventing typos or the use of unsupported filter types.
+FilterType: TypeAlias = Literal[
+    "RowKeyFilter",
+    "ColumnQualifiers",
+    "ColumnQualifierRegex",
+    "ColumnQualifierPrefix",
+    "ColumnValueFilter",
+]
+
+# Represents the top-level filter dictionary passed to search methods.
+# - "RowKeyFilter": Specifies a row key prefix (appended to the collection prefix).
+# - "ColumnQualifiers", "ColumnQualifierRegex", "ColumnQualifierPrefix": High-level filters
+#   that operate on column qualifiers (metadata keys).
+# - "ColumnValueFilter": A dedicated key for all value-based metadata filtering. Its
+#   value must conform to the ValueFilterDict structure.
+FilterDict: TypeAlias = Dict[FilterType, Union[str, List[str], ValueFilterDict]]
 
 
 class DistanceStrategy(Enum):
@@ -125,7 +147,7 @@ class MetadataMapping(ColumnConfig):
     It is used for filtering tasks and must be called in order to use this metadata
     key for filtering tasks.
 
-    This class automatically sets the column family to the default metadata family
+    This class automatically sets the column family to the default metadata family "md"
     and defaults the column name to the metadata key if not specified.
 
     Attributes:
@@ -142,11 +164,15 @@ class MetadataMapping(ColumnConfig):
     ):
         """Initializes the MetadataMapping.
 
+        This class automatically sets the column family to the default metadata family "md"
+        and defaults the column name to the metadata key if not specified.
+
         Args:
             metadata_key (str): The metadata dictionary key to map.
             encoding (Encoding): The data encoding to use for the column's value.
             column_qualifier (Optional[str]): Optional name to use for the column qualifier. If not
                                               provided, the `metadata_key` is used as the column name.
+                                              Column family by default is set to "md".
         """
         final_column_name = column_qualifier or metadata_key
         super().__init__(
@@ -198,8 +224,13 @@ class AsyncBigtableVectorStore(VectorStore):
             content_column (ColumnConfig): ColumnConfig for document content.
             embedding_column (ColumnConfig): ColumnConfig for vector embeddings.
             collection (str): The name of the collection. It is used as a prefix for row keys. Defaults to "default_vectors"
-            metadata_as_json_column (Optional[ColumnConfig]): ColumnConfig for metadata as JSON column.
-            metadata_mappings (Optional[List[MetadataMapping]]): List of MetadataMapping for additional metadata columns.
+            metadata_as_json_column (Optional[ColumnConfig]): ColumnConfig for storing all metadata as a single JSON string.
+                This is useful for efficiently retrieving all metadata for a document at once,
+                especially fields not defined in `metadata_mappings`. The serialized JSON object
+                is stored in the column you define here. This field is retrieved by methods like `aget_by_ids`
+                but is **not** used for filtering in search queries.
+            metadata_mappings (Optional[List[MetadataMapping]]): List of MetadataMapping for individual metadata columns
+                that you intend to use for filtering in search queries.
         """
         self.client = client
         self.instance_id = instance_id
@@ -634,10 +665,11 @@ class AsyncBigtableVectorStore(VectorStore):
     def _build_where_clause(
         self, filters: Optional[FilterDict]
     ) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
-        """Builds the WHERE clause for a BTQL query from a flat dictionary of filters.
+        """Builds the WHERE clause for a BTQL query from a structured filter dictionary.
 
         Args:
-            filters (Optional[FilterDict]): A dictionary of filters to apply to the query.
+            filters (Optional[FilterDict]): A dictionary of filters to apply to the query,
+                structured according to the FilterDict TypeAlias.
 
         Returns:
             Tuple[str, Dict[str, Any], Dict[str, Any]]: A tuple containing the WHERE clause
@@ -655,17 +687,14 @@ class AsyncBigtableVectorStore(VectorStore):
         line_padding = " " * 1
         conditions = []
 
-        # Create a mutable copy to pop keys from.
-        remaining_filters = filters.copy()
-
         # Start with the mandatory collection prefix.
         row_key_prefix = f"{self.collection}:"
 
-        # If a 'rowKeyFilter' is provided, append it to the collection prefix.
-        if "rowKeyFilter" in remaining_filters:
-            row_key_suffix = remaining_filters.pop("rowKeyFilter")
+        # If a 'RowKeyFilter' is provided, append it to the collection prefix.
+        if "RowKeyFilter" in filters:
+            row_key_suffix = filters["RowKeyFilter"]
             if not isinstance(row_key_suffix, str):
-                raise TypeError("The value for 'rowKeyFilter' must be a string.")
+                raise TypeError("The value for 'RowKeyFilter' must be a string.")
             row_key_prefix += row_key_suffix
 
         # Always apply the row key prefix filter.
@@ -679,12 +708,14 @@ class AsyncBigtableVectorStore(VectorStore):
         conditions.append(row_prefix_clause)
         param_count += 1
 
-        # Process top-level qualifier filters from the flattened structure.
-        if "Qualifiers" in remaining_filters:
+        # Process top-level qualifier filters.
+        if "ColumnQualifiers" in filters:
             param_key = f"qualifiers_{param_count}"
-            qualifiers_value = remaining_filters.pop("Qualifiers")
+            qualifiers_value = filters["ColumnQualifiers"]
             if not isinstance(qualifiers_value, list):
-                raise TypeError("The value for 'Qualifiers' must be a list of strings.")
+                raise TypeError(
+                    "The value for 'ColumnQualifiers' must be a list of strings."
+                )
             params[param_key] = [q.encode("utf-8") for q in qualifiers_value]
             params_type[param_key] = Type.Array(Type.Bytes())
             new_clause = (
@@ -694,9 +725,9 @@ class AsyncBigtableVectorStore(VectorStore):
             conditions.append(new_clause)
             param_count += 1
 
-        if "ColumnQualifierPrefix" in remaining_filters:
+        if "ColumnQualifierPrefix" in filters:
             param_key = f"qualifiersPrefix_{param_count}"
-            prefix_value = remaining_filters.pop("ColumnQualifierPrefix")
+            prefix_value = filters["ColumnQualifierPrefix"]
             if not isinstance(prefix_value, str):
                 raise TypeError(
                     "The value for 'ColumnQualifierPrefix' must be a string."
@@ -710,9 +741,9 @@ class AsyncBigtableVectorStore(VectorStore):
             conditions.append(new_clause)
             param_count += 1
 
-        if "ColumnQualifierRegex" in remaining_filters:
+        if "ColumnQualifierRegex" in filters:
             param_key = f"qualifiersRegex_{param_count}"
-            regex_value = remaining_filters.pop("ColumnQualifierRegex")
+            regex_value = filters["ColumnQualifierRegex"]
             if not isinstance(regex_value, str):
                 raise TypeError(
                     "The value for 'ColumnQualifierRegex' must be a string."
@@ -726,9 +757,14 @@ class AsyncBigtableVectorStore(VectorStore):
             conditions.append(new_clause)
             param_count += 1
 
-        # Any remaining filters are treated as value-based filters.
-        if remaining_filters:
-            value_filters: ValueFilterDict = remaining_filters
+        # Process value-based filters from the dedicated "ColumnValueFilter" dictionary.
+        if "ColumnValueFilter" in filters:
+            value_filters = filters["ColumnValueFilter"]
+            if not isinstance(value_filters, dict):
+                raise TypeError(
+                    "The value for 'ColumnValueFilter' must be a dictionary."
+                )
+
             (
                 value_clause,
                 value_params,
@@ -743,6 +779,9 @@ class AsyncBigtableVectorStore(VectorStore):
                 params_type.update(value_params_type)
 
         # Join all conditions with AND.
+        if not conditions:
+            return "", {}, {}
+
         joiner = f" {new_line}{line_padding}{tab_space}{tab_space}AND"
         btql_where_clause = joiner.join(conditions)
 
@@ -883,7 +922,7 @@ class AsyncBigtableVectorStore(VectorStore):
         Prepares the full BTQL query string, parameters, and types for a vector search.
 
         Args:
-            embedding (List[float]): The vector to search with.
+            embedding (List[float]): The embedding query vector.
             k (Optional[int]): The number of nearest neighbors to retrieve.
             query_parameters (Optional[QueryParameters]): The parameters for the query, including distance
                                                 strategy and filters.
@@ -945,7 +984,7 @@ class AsyncBigtableVectorStore(VectorStore):
         """Executes a vector search query against the Bigtable instance.
 
         Args:
-            embedding (List[float]): The vector to search for.
+            embedding (List[float]): The embedding query vector.
             k (Optional[int]): The number of results to return.
             query_parameters (Optional[QueryParameters]): Query parameters including filters.
 
@@ -1011,7 +1050,7 @@ class AsyncBigtableVectorStore(VectorStore):
         """Return docs most similar to embedding vector.
 
         Args:
-            embedding (List[float]): The embedding vector to search with.
+            embedding (List[float]): The embedding query vector.
             k (int): The number of documents to return. Defaults to 4.
             query_parameters (Optional[QueryParameters]): Optional query parameters.
             **kwargs (Any): Additional keyword arguments, can include 'filter'.
@@ -1059,7 +1098,7 @@ class AsyncBigtableVectorStore(VectorStore):
         """Run similarity search with distance by vector.
 
         Args:
-            embedding (List[float]): The embedding vector to search with.
+            embedding (List[float]): The embedding query vector.
             k (int): The number of documents to return. Defaults to 4.
             query_parameters (Optional[QueryParameters]): Optional query parameters.
             **kwargs (Any): Additional keyword arguments, can include 'filter'.
@@ -1185,7 +1224,7 @@ class AsyncBigtableVectorStore(VectorStore):
         """Return docs selected using the maximal marginal relevance.
 
         Args:
-            embedding (list[float]): The embedding vector for the query.
+            embedding (list[float]): The embedding query vector.
             k (int): Number of documents to return. Defaults to 4.
             fetch_k (int): Number of documents to fetch for MMR. Defaults to 20.
             lambda_mult (float): Diversity factor. Defaults to 0.5.
@@ -1220,7 +1259,7 @@ class AsyncBigtableVectorStore(VectorStore):
         """Return docs and scores selected using the maximal marginal relevance.
 
         Args:
-            embedding (list[float]): The embedding vector for the query.
+            embedding (list[float]): The embedding query vector.
             k (Optional[int]): Number of documents to return. Defaults to 4.
             fetch_k (Optional[int]): Number of documents to fetch for MMR. Defaults to 20.
             lambda_mult (float): Diversity factor. Defaults to 0.5.
