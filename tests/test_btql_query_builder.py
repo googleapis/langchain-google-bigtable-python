@@ -17,7 +17,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from async_vector_store import (
+from langchain_google_bigtable.async_vector_store import (
     AsyncBigtableVectorStore,
     ColumnConfig,
     Encoding,
@@ -395,3 +395,42 @@ class TestPrepareBtqlQuery:
         assert query_params["eq_1"] == b"green"
         assert query_params["lt_2"] == struct.pack(">q", 5)
         assert query_params["eq_3"] == struct.pack("?", False)
+
+    def test_query_with_all_filter_types_nested(
+        self, store: AsyncBigtableVectorStore
+    ) -> None:
+        """
+        Tests a complex query combining rowKeyFilter, qualifier filters, value filters,
+        and a nested logical filter (A AND (B OR C)).
+        """
+        store.collection = "complex-collection"
+        params = QueryParameters(
+            filters={
+                "rowKeyFilter": "group1/",
+                "Qualifiers": ["number", "color"],
+                "ColumnValueChainFilter": {
+                    "is_good": {"==": True},
+                    "ColumnValueUnionFilter": {
+                        "rating": {">=": 4.9},
+                        "color": {"==": "red"},
+                    },
+                },
+            }
+        )
+
+        # Prepare Query
+        btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
+
+        # Remove tab spaces and new lines for easier comparison
+        btql_removed = btql.replace("\n", "").replace("\t", "")
+
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND (ARRAY_INCLUDES_ALL(MAP_KEYS(md), @qualifiers_1))  AND ( ( ( md['is_good'] = @eq_2 )  AND   ( ( md['rating'] >= @gte_3 )  OR   ( md['color'] = @eq_4 ) ) ) )"
+
+        assert expected_where_clause in btql_removed
+
+        # Assert the placeholder values are correctly encoded
+        assert query_params["rowPrefix_0"] == b"complex-collection:group1/"
+        assert query_params["qualifiers_1"] == [b"number", b"color"]
+        assert query_params["eq_2"] == struct.pack("?", True)
+        assert query_params["gte_3"] == struct.pack(">f", 4.9)
+        assert query_params["eq_4"] == b"red"
