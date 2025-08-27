@@ -231,9 +231,7 @@ class TestBigtableVectorStoreSync:
 
         # Check if Value Error is raised when fetch_k is greater than k.
         with pytest.raises(ValueError):
-            res = sync_store.max_marginal_relevance_search(
-                "baz", fetch_k=10, k=20
-            )
+            res = sync_store.max_marginal_relevance_search("baz", fetch_k=10, k=20)
 
         # Clean up
         sync_store.delete(added_doc_ids)
