@@ -59,15 +59,15 @@ def get_env_var(key: str, desc: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def project_id() -> str:
+def project_id() -> Iterator[str]:
     """Returns the GCP Project ID from environment variables."""
-    return get_env_var("PROJECT_ID", "GCP Project ID")
+    yield get_env_var("PROJECT_ID", "GCP Project ID")
 
 
 @pytest.fixture(scope="session")
-def instance_id() -> str:
+def instance_id() -> Iterator[str]:
     """Returns the Bigtable Instance ID from environment variables."""
-    return get_env_var("INSTANCE_ID", "Bigtable Instance ID")
+    yield get_env_var("INSTANCE_ID", "Bigtable Instance ID")
 
 
 @pytest.fixture(scope="session")
@@ -110,7 +110,7 @@ class TestTableInitialization:
             )
 
 
-@pytest.mark.asyncio(loop_scope="class")
+@pytest.mark.asyncio
 class TestBigtableVectorStoreSync:
     """Tests for a synchronously initialized BigtableVectorStore."""
 
@@ -182,7 +182,7 @@ class TestBigtableVectorStoreSync:
         sync_store.delete(added_ids)
 
 
-@pytest.mark.asyncio(loop_scope="class")
+@pytest.mark.asyncio
 class TestBigtableVectorStoreAsync:
     """Tests for an asynchronously initialized BigtableVectorStore."""
 
@@ -252,7 +252,7 @@ class TestBigtableVectorStoreAsync:
         await async_store.adelete(added_ids)
 
 
-@pytest.mark.asyncio(loop_scope="class")
+@pytest.mark.asyncio
 class TestAdvancedScenarios:
     """Tests for advanced configurations, factory methods, and error handling."""
 
