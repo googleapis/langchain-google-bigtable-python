@@ -28,12 +28,12 @@ from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_google_bigtable.engine import BigtableEngine
 from langchain_google_bigtable.vector_store import (
     BigtableVectorStore,
-    init_vector_store_table,
-    DistanceStrategy,
     ColumnConfig,
+    DistanceStrategy,
     Encoding,
     QueryParameters,
     VectorMetadataMapping,
+    init_vector_store_table,
 )
 
 TEST_ROW_PREFIX = "pytest-vstore-"
