@@ -83,17 +83,10 @@ ValueFilterDict: TypeAlias
 # which contains another ValueFilterDict.
 ValueFilterDict = Dict[str, Union[OperatorDict, "ValueFilterDict"]]
 
-# Represents the dictionary provided to the 'metadataFilter' key.
-# It can contain high-level qualifier filters and the nested ValueFilterDict.
-MetadataFilterDict: TypeAlias = Dict[
-    str, Union[str, List[str], OperatorDict, ValueFilterDict]
-]
-
-# Represents the top-level filter dictionary that users can provide.
-FilterDict: TypeAlias = Dict[
-    Literal["collectionFilter", "metadataFilter"],
-    Union[str, MetadataFilterDict],
-]
+# Represents the top-level filter dictionary. It can contain a `rowKeyFilter`
+# to specify a row key prefix that follows the collection prefix by default.
+# It also supports high-level qualifier filters and nested value-based filters.
+FilterDict: TypeAlias = Dict[str, Union[str, List[str], OperatorDict, ValueFilterDict]]
 
 
 class DistanceStrategy(Enum):
@@ -641,7 +634,7 @@ class AsyncBigtableVectorStore(VectorStore):
     def _build_where_clause(
         self, filters: Optional[FilterDict]
     ) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
-        """Builds the WHERE clause for a BTQL query from a dictionary of filters.
+        """Builds the WHERE clause for a BTQL query from a flat dictionary of filters.
 
         Args:
             filters (Optional[FilterDict]): A dictionary of filters to apply to the query.
@@ -651,127 +644,90 @@ class AsyncBigtableVectorStore(VectorStore):
             as a string, a dictionary of parameters for the query, and a dictionary of
             parameter types.
         """
+        if not filters:
+            filters = {}
 
-        btql_where_clause = ""
         params: Dict[str, Any] = {}
         params_type: Dict[str, Any] = {}
         param_count = 0
         new_line = "\n"
         tab_space = "\t"
         line_padding = " " * 1
-        row_prefix_clause = ""
+        conditions = []
 
-        # The Vector Store instance is associated with a specific collection.
-        # Default to filtering rows using the collection name as a prefix.
+        # Create a mutable copy to pop keys from.
+        remaining_filters = filters.copy()
+
+        # Start with the mandatory collection prefix.
+        row_key_prefix = f"{self.collection}:"
+
+        # If a 'rowKeyFilter' is provided, append it to the collection prefix.
+        if "rowKeyFilter" in remaining_filters:
+            row_key_suffix = remaining_filters.pop("rowKeyFilter")
+            if not isinstance(row_key_suffix, str):
+                raise TypeError("The value for 'rowKeyFilter' must be a string.")
+            row_key_prefix += row_key_suffix
+
+        # Always apply the row key prefix filter.
         param_key = f"rowPrefix_{param_count}"
-        collection_prefix = f"{self.collection}:"
-        params[param_key] = collection_prefix.encode("utf-8")
+        params[param_key] = row_key_prefix.encode("utf-8")
         params_type[param_key] = Type.Bytes()
         row_prefix_clause = (
             f"{new_line}{line_padding}{tab_space}{tab_space}"
-            f"(STARTS_WITH(_key, @{param_key})) {new_line}"
+            f"(STARTS_WITH(_key, @{param_key}))"
         )
+        conditions.append(row_prefix_clause)
         param_count += 1
 
-        # If the user provides a 'collectionFilter', it overrides the default
-        # collection prefix filter, allowing for more specific row key filtering.
-        if filters and "collectionFilter" in filters:
-            # User provided a 'collectionFilter' filter, overriding the default.
-            # Update the parameter with the user-specified prefix.
-            params[param_key] = filters["collectionFilter"].encode("utf-8")
-
-        metadata_clause = ""
-        if filters and "metadataFilter" in filters:
-            # Process the nested metadata filters to build the rest of the clause.
-            (
-                metadata_clause,
-                metadata_params,
-                metadata_params_type,
-                param_count,
-            ) = self._process_metadata_filter(
-                filters["metadataFilter"], param_count, line_padding + tab_space
-            )
-            params.update(metadata_params)
-            params_type.update(metadata_params_type)
-
-        # Combine the row prefix and metadata clauses with an AND operator if both exist.
-        if row_prefix_clause and metadata_clause:
-            joiner = f"{new_line}{line_padding}{tab_space}{tab_space} AND {new_line}"
-            btql_where_clause = row_prefix_clause + joiner + metadata_clause
-        else:
-            btql_where_clause = row_prefix_clause or metadata_clause
-
-        return btql_where_clause, params, params_type
-
-    def _process_metadata_filter(
-        self, filter_dict: MetadataFilterDict, param_count: int, line_padding: str
-    ) -> Tuple[str, Dict[str, Any], Dict[str, Any], int]:
-        """Processes metadata-specific filters for the WHERE clause.
-
-        Args:
-            filter_dict (MetadataFilterDict): The dictionary containing metadata filters.
-            param_count (int): The current count of parameters to ensure unique names.
-            line_padding (str): A string for formatting the query with appropriate indentation.
-
-        Returns:
-            Tuple[str, Dict[str, Any], Dict[str, Any], int]: A tuple containing the generated
-            clause string, a dictionary of parameters, a dictionary of parameter types, and
-            the updated parameter count.
-        """
-        conditions = []
-        local_params: Dict[str, Any] = {}
-        local_params_type: Dict[str, Any] = {}
-        new_line = "\n"
-        tab_space = "\t"
-
-        remaining_filters = filter_dict.copy()
-
-        # First, handle special top-level qualifier filters. These check for the
-        # existence or pattern of metadata keys (column qualifiers) themselves.
+        # Process top-level qualifier filters from the flattened structure.
         if "Qualifiers" in remaining_filters:
             param_key = f"qualifiers_{param_count}"
-            local_params[param_key] = [
-                q.encode("utf-8") for q in remaining_filters.pop("Qualifiers")
-            ]
-            local_params_type[param_key] = Type.Array(Type.Bytes())
+            qualifiers_value = remaining_filters.pop("Qualifiers")
+            if not isinstance(qualifiers_value, list):
+                raise TypeError("The value for 'Qualifiers' must be a list of strings.")
+            params[param_key] = [q.encode("utf-8") for q in qualifiers_value]
+            params_type[param_key] = Type.Array(Type.Bytes())
             new_clause = (
-                f"{new_line}{line_padding}{tab_space}"
+                f"{new_line}{line_padding}{tab_space}{tab_space}"
                 f"(ARRAY_INCLUDES_ALL(MAP_KEYS({METADATA_COLUMN_FAMILY}), @{param_key}))"
-                f"{new_line}"
             )
             conditions.append(new_clause)
             param_count += 1
 
         if "ColumnQualifierPrefix" in remaining_filters:
             param_key = f"qualifiersPrefix_{param_count}"
-            local_params[param_key] = remaining_filters.pop(
-                "ColumnQualifierPrefix"
-            ).encode("utf-8")
-            local_params_type[param_key] = Type.Bytes()
+            prefix_value = remaining_filters.pop("ColumnQualifierPrefix")
+            if not isinstance(prefix_value, str):
+                raise TypeError(
+                    "The value for 'ColumnQualifierPrefix' must be a string."
+                )
+            params[param_key] = prefix_value.encode("utf-8")
+            params_type[param_key] = Type.Bytes()
             new_clause = (
-                f"{new_line}{line_padding}{tab_space}"
+                f"{new_line}{line_padding}{tab_space}{tab_space}"
                 f"(ARRAY_LENGTH(ARRAY_FILTER(MAP_KEYS({METADATA_COLUMN_FAMILY}), e -> STARTS_WITH(e, @{param_key}))) > 0)"
-                f"{new_line}"
             )
             conditions.append(new_clause)
             param_count += 1
 
         if "ColumnQualifierRegex" in remaining_filters:
             param_key = f"qualifiersRegex_{param_count}"
-            local_params[param_key] = remaining_filters.pop("ColumnQualifierRegex")
-            local_params_type[param_key] = Type.String()
+            regex_value = remaining_filters.pop("ColumnQualifierRegex")
+            if not isinstance(regex_value, str):
+                raise TypeError(
+                    "The value for 'ColumnQualifierRegex' must be a string."
+                )
+            params[param_key] = regex_value
+            params_type[param_key] = Type.String()
             new_clause = (
-                f"{new_line}{line_padding}{tab_space}"
+                f"{new_line}{line_padding}{tab_space}{tab_space}"
                 f"(ARRAY_LENGTH(ARRAY_FILTER(MAP_KEYS({METADATA_COLUMN_FAMILY}), e -> REGEXP_CONTAINS(SAFE_CONVERT_BYTES_TO_STRING(e), @{param_key}))) > 0)"
-                f"{new_line}"
             )
             conditions.append(new_clause)
             param_count += 1
 
-        # After processing qualifier filters, the rest are value-based filters.
+        # Any remaining filters are treated as value-based filters.
         if remaining_filters:
-            line_padding += tab_space
-            # Cast the remaining filters to ValueFilterDict for the recursive processor.
             value_filters: ValueFilterDict = remaining_filters
             (
                 value_clause,
@@ -779,18 +735,18 @@ class AsyncBigtableVectorStore(VectorStore):
                 value_params_type,
                 param_count,
             ) = self._process_value_filters(
-                value_filters, "AND", param_count, line_padding
+                value_filters, "AND", param_count, line_padding + tab_space
             )
             if value_clause:
-                value_clause = f"{new_line}{line_padding}{value_clause}"
                 conditions.append(value_clause)
-                local_params.update(value_params)
-                local_params_type.update(value_params_type)
+                params.update(value_params)
+                params_type.update(value_params_type)
 
-        joiner = f"{new_line}{line_padding} AND {new_line}"
-        joined_conditions = joiner.join(conditions)
+        # Join all conditions with AND.
+        joiner = f" {new_line}{line_padding}{tab_space}{tab_space}AND"
+        btql_where_clause = joiner.join(conditions)
 
-        return joined_conditions, local_params, local_params_type, param_count
+        return btql_where_clause, params, params_type
 
     def _process_value_filters(
         self,

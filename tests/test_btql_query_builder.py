@@ -17,7 +17,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from langchain_google_bigtable.async_vector_store import (
+from async_vector_store import (
     AsyncBigtableVectorStore,
     ColumnConfig,
     Encoding,
@@ -77,7 +77,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_equal(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '==' (equal) operator and verifies UTF8 encoding."""
-        params = QueryParameters(filters={"metadataFilter": {"color": {"==": "red"}}})
+        params = QueryParameters(filters={"color": {"==": "red"}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -85,7 +85,9 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['color'] = @eq_1 ) )"
+        expected_where_clause = (
+            "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( md['color'] = @eq_1 ) )"
+        )
 
         assert expected_where_clause in btql_removed
 
@@ -94,7 +96,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_not_equal(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '!=' (not equal) operator and INT_BIG_ENDIAN encoding."""
-        params = QueryParameters(filters={"metadataFilter": {"number": {"!=": 50}}})
+        params = QueryParameters(filters={"number": {"!=": 50}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -102,7 +104,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['number'] != @ne_1 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( md['number'] != @ne_1 ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -111,7 +113,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_greater_than(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '>' (greater than) operator and INT_BIG_ENDIAN encoding."""
-        params = QueryParameters(filters={"metadataFilter": {"number": {">": 100}}})
+        params = QueryParameters(filters={"number": {">": 100}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -119,7 +121,9 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['number'] > @gt_1 ) )"
+        expected_where_clause = (
+            "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( md['number'] > @gt_1 ) )"
+        )
 
         assert expected_where_clause in btql_removed
 
@@ -130,7 +134,7 @@ class TestPrepareBtqlQuery:
         self, store: AsyncBigtableVectorStore
     ) -> None:
         """Tests the '>=' (greater than or equal) operator and FLOAT encoding."""
-        params = QueryParameters(filters={"metadataFilter": {"rating": {">=": 3.5}}})
+        params = QueryParameters(filters={"rating": {">=": 3.5}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -138,7 +142,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['rating'] >= @gte_1 ) ) "
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( md['rating'] >= @gte_1 ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -147,7 +151,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_less_than(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '<' (less than) operator and INT_BIG_ENDIAN encoding."""
-        params = QueryParameters(filters={"metadataFilter": {"number": {"<": 10}}})
+        params = QueryParameters(filters={"number": {"<": 10}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -155,7 +159,9 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['number'] < @lt_1 ) )"
+        expected_where_clause = (
+            "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( md['number'] < @lt_1 ) )"
+        )
 
         assert expected_where_clause in btql_removed
 
@@ -164,7 +170,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_less_than_or_equal(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the '<=' (less than or equal) operator and FLOAT encoding."""
-        params = QueryParameters(filters={"metadataFilter": {"rating": {"<=": 4.9}}})
+        params = QueryParameters(filters={"rating": {"<=": 4.9}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -172,7 +178,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['rating'] <= @lte_1 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( md['rating'] <= @lte_1 ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -181,9 +187,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_in(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'in' operator and verifies correct encoding for multiple values."""
-        params = QueryParameters(
-            filters={"metadataFilter": {"color": {"in": ["red", "blue"]}}}
-        )
+        params = QueryParameters(filters={"color": {"in": ["red", "blue"]}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -191,7 +195,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['color'] IN UNNEST(@in_1) ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( md['color'] IN UNNEST(@in_1) ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -200,9 +204,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_not_in(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'nin' (not in) operator and verifies correct encoding for multiple int values."""
-        params = QueryParameters(
-            filters={"metadataFilter": {"number": {"nin": [1, 2, 3]}}}
-        )
+        params = QueryParameters(filters={"number": {"nin": [1, 2, 3]}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -210,7 +212,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['number'] NOT IN UNNEST(@nin_1) ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( md['number'] NOT IN UNNEST(@nin_1) ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -219,9 +221,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_contains(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'contains' string operator."""
-        params = QueryParameters(
-            filters={"metadataFilter": {"color": {"contains": "gree"}}}
-        )
+        params = QueryParameters(filters={"color": {"contains": "gree"}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -229,7 +229,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( STRPOS(md['color'], @contains_1) > 0 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( STRPOS(md['color'], @contains_1) > 0 ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -238,9 +238,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_like(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'like' (regex) operator."""
-        params = QueryParameters(
-            filters={"metadataFilter": {"color": {"like": "bl.e"}}}
-        )
+        params = QueryParameters(filters={"color": {"like": "bl.e"}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -248,7 +246,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( REGEXP_CONTAINS(SAFE_CONVERT_BYTES_TO_STRING(md['color']), @like_1) ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( REGEXP_CONTAINS(SAFE_CONVERT_BYTES_TO_STRING(md['color']), @like_1) ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -257,9 +255,7 @@ class TestPrepareBtqlQuery:
 
     def test_filter_qualifiers_exist(self, store: AsyncBigtableVectorStore) -> None:
         """Tests the 'Qualifiers' filter to check for column existence."""
-        params = QueryParameters(
-            filters={"metadataFilter": {"Qualifiers": ["color", "rating"]}}
-        )
+        params = QueryParameters(filters={"Qualifiers": ["color", "rating"]})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -267,7 +263,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND  (ARRAY_INCLUDES_ALL(MAP_KEYS(md), @qualifiers_1))"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND (ARRAY_INCLUDES_ALL(MAP_KEYS(md), @qualifiers_1))"
 
         assert expected_where_clause in btql_removed
 
@@ -279,7 +275,7 @@ class TestPrepareBtqlQuery:
     ) -> None:
         """Tests combining a collection prefix with a metadata filter and verifies parameter values."""
         store.collection = "my-docs"
-        params = QueryParameters(filters={"metadataFilter": {"number": {">=": 42}}})
+        params = QueryParameters(filters={"number": {">=": 42}})
 
         # Prepare Query
         btql, query_params, _ = store._prepare_btql_query([0.1], 5, params)
@@ -287,7 +283,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( md['number'] >= @gte_1 ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( md['number'] >= @gte_1 ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -299,11 +295,9 @@ class TestPrepareBtqlQuery:
         """Tests a simple 'ColumnValueChainFilter' (AND) and verifies parameter values."""
         params = QueryParameters(
             filters={
-                "metadataFilter": {
-                    "ColumnValueChainFilter": {
-                        "color": {"==": "blue"},
-                        "is_good": {"==": True},
-                    }
+                "ColumnValueChainFilter": {
+                    "color": {"==": "blue"},
+                    "is_good": {"==": True},
                 }
             }
         )
@@ -313,7 +307,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( ( md['color'] = @eq_1 )  AND   ( md['is_good'] = @eq_2 ) ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( ( md['color'] = @eq_1 )  AND   ( md['is_good'] = @eq_2 ) ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -325,11 +319,9 @@ class TestPrepareBtqlQuery:
         """Tests a simple 'ColumnValueUnionFilter' (OR) and verifies parameter values."""
         params = QueryParameters(
             filters={
-                "metadataFilter": {
-                    "ColumnValueUnionFilter": {
-                        "number": {"<": 10},
-                        "rating": {">": 4.9},
-                    }
+                "ColumnValueUnionFilter": {
+                    "number": {"<": 10},
+                    "rating": {">": 4.9},
                 }
             }
         )
@@ -339,7 +331,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces, new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( ( md['number'] < @lt_1 )  OR   ( md['rating'] > @gt_2 ) ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( ( md['number'] < @lt_1 )  OR   ( md['rating'] > @gt_2 ) ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -351,14 +343,12 @@ class TestPrepareBtqlQuery:
         """Tests a complex nested filter: (A AND B) OR C."""
         params = QueryParameters(
             filters={
-                "metadataFilter": {
-                    "ColumnValueUnionFilter": {
-                        "ColumnValueChainFilter": {
-                            "color": {"==": "red"},
-                            "is_good": {"==": True},
-                        },
-                        "number": {">": 100},
-                    }
+                "ColumnValueUnionFilter": {
+                    "ColumnValueChainFilter": {
+                        "color": {"==": "red"},
+                        "is_good": {"==": True},
+                    },
+                    "number": {">": 100},
                 }
             }
         )
@@ -368,7 +358,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces and new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( ( ( md['color'] = @eq_1 )  AND   ( md['is_good'] = @eq_2 ) )  OR   ( md['number'] > @gt_3 ) ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( ( ( md['color'] = @eq_1 )  AND   ( md['is_good'] = @eq_2 ) )  OR   ( md['number'] > @gt_3 ) ) )"
 
         assert expected_where_clause in btql_removed
 
@@ -381,14 +371,12 @@ class TestPrepareBtqlQuery:
         """Tests a complex nested filter: A AND (B OR C)."""
         params = QueryParameters(
             filters={
-                "metadataFilter": {
-                    "ColumnValueChainFilter": {
-                        "color": {"==": "green"},
-                        "ColumnValueUnionFilter": {
-                            "number": {"<": 5},
-                            "is_good": {"==": False},
-                        },
-                    }
+                "ColumnValueChainFilter": {
+                    "color": {"==": "green"},
+                    "ColumnValueUnionFilter": {
+                        "number": {"<": 5},
+                        "is_good": {"==": False},
+                    },
                 }
             }
         )
@@ -399,7 +387,7 @@ class TestPrepareBtqlQuery:
         # Remove tab spaces and new lines
         btql_removed = btql.replace("\n", "").replace("\t", "")
 
-        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))   AND   ( ( ( md['color'] = @eq_1 )  AND   ( ( md['number'] < @lt_2 )  OR   ( md['is_good'] = @eq_3 ) ) ) )"
+        expected_where_clause = "WHERE  (STARTS_WITH(_key, @rowPrefix_0))  AND ( ( ( md['color'] = @eq_1 )  AND   ( ( md['number'] < @lt_2 )  OR   ( md['is_good'] = @eq_3 ) ) ) )"
 
         assert expected_where_clause in btql_removed
 
