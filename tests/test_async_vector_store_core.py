@@ -33,8 +33,8 @@ from langchain_google_bigtable.async_vector_store import (
     ColumnConfig,
     DistanceStrategy,
     Encoding,
-    MetadataMapping,
     QueryParameters,
+    VectorMetadataMapping,
 )
 
 TEST_ROW_PREFIX = "pytest-core-vstore-"
@@ -125,10 +125,10 @@ class TestCoreFunctionality:
                 column_family=EMBEDDING_COLUMN_FAMILY, column_qualifier="embedding"
             ),
             metadata_mappings=[
-                MetadataMapping("color", Encoding.UTF8),
-                MetadataMapping("number", Encoding.INT_BIG_ENDIAN),
-                MetadataMapping("is_good", Encoding.BOOL),
-                MetadataMapping("rating", Encoding.FLOAT),
+                VectorMetadataMapping("color", Encoding.UTF8),
+                VectorMetadataMapping("number", Encoding.INT_BIG_ENDIAN),
+                VectorMetadataMapping("is_good", Encoding.BOOL),
+                VectorMetadataMapping("rating", Encoding.FLOAT),
             ],
             collection=TEST_ROW_PREFIX,
         )

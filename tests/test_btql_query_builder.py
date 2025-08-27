@@ -21,8 +21,8 @@ from langchain_google_bigtable.async_vector_store import (
     AsyncBigtableVectorStore,
     ColumnConfig,
     Encoding,
-    MetadataMapping,
     QueryParameters,
+    VectorMetadataMapping,
 )
 
 MOCK_CLIENT = Mock()
@@ -50,10 +50,10 @@ class TestPrepareBtqlQuery:
                 column_family="cf", column_qualifier="embedding"
             ),
             metadata_mappings=[
-                MetadataMapping("color", Encoding.UTF8),
-                MetadataMapping("is_good", Encoding.BOOL),
-                MetadataMapping("number", Encoding.INT_BIG_ENDIAN),
-                MetadataMapping("rating", Encoding.FLOAT),
+                VectorMetadataMapping("color", Encoding.UTF8),
+                VectorMetadataMapping("is_good", Encoding.BOOL),
+                VectorMetadataMapping("number", Encoding.INT_BIG_ENDIAN),
+                VectorMetadataMapping("rating", Encoding.FLOAT),
             ],
         )
 
