@@ -54,7 +54,7 @@ from langchain_core.vectorstores import (
     utils,
 )
 
-from langchain_google_bigtable.loader import Encoding
+from .loader import Encoding
 
 try:
     from typing import Literal, TypeAlias  # type: ignore
@@ -141,7 +141,7 @@ class ColumnConfig:
     encoding: Encoding = Encoding.UTF8
 
 
-class MetadataMapping(ColumnConfig):
+class VectorMetadataMapping(ColumnConfig):
     """
     A specific ColumnConfig for mapping a metadata key to its own Bigtable column.
     It is used for filtering tasks and must be called in order to use this metadata
@@ -162,7 +162,7 @@ class MetadataMapping(ColumnConfig):
         encoding: Encoding,
         column_qualifier: Optional[str] = None,
     ):
-        """Initializes the MetadataMapping.
+        """Initializes the VectorMetadataMapping.
 
         This class automatically sets the column family to the default metadata family "md"
         and defaults the column name to the metadata key if not specified.
@@ -212,7 +212,7 @@ class AsyncBigtableVectorStore(VectorStore):
         embedding_column: ColumnConfig,
         collection: str = DEFAULT_COLLECTION,
         metadata_as_json_column: Optional[ColumnConfig] = None,
-        metadata_mappings: Optional[List[MetadataMapping]] = None,
+        metadata_mappings: Optional[List[VectorMetadataMapping]] = None,
     ):
         """Initializes the AsyncBigtableVectorStore.
 
@@ -229,7 +229,7 @@ class AsyncBigtableVectorStore(VectorStore):
                 especially fields not defined in `metadata_mappings`. The serialized JSON object
                 is stored in the column you define here. This field is retrieved by methods like `aget_by_ids`
                 but is **not** used for filtering in search queries.
-            metadata_mappings (Optional[List[MetadataMapping]]): List of MetadataMapping for individual metadata columns
+            metadata_mappings (Optional[List[VectorMetadataMapping]]): List of VectorMetadataMapping for individual metadata columns
                 that you intend to use for filtering in search queries.
         """
         self.client = client
@@ -823,7 +823,7 @@ class AsyncBigtableVectorStore(VectorStore):
                 "ColumnValueChainFilter",
             ]:
                 raise ValueError(
-                    f"Unsupported filter or Metadata Column: {key}. Initialize the class with this metadatamapping to filter using this metadata."
+                    f"Unsupported filter or Metadata Column: {key}. Initialize the class with this VectorMetadataMapping to filter using this metadata."
                 )
 
             # Recursively process nested logical filters.

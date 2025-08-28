@@ -35,9 +35,9 @@ from langchain_google_bigtable.async_vector_store import (
     ColumnConfig,
     DistanceStrategy,
     Encoding,
-    MetadataMapping,
     QueryParameters,
     VectorDataType,
+    VectorMetadataMapping,
 )
 
 TEST_ROW_PREFIX = "pytest-advanced-vstore-1-"
@@ -128,10 +128,10 @@ class TestAdvancedFeatures:
                 column_family=EMBEDDING_COLUMN_FAMILY, column_qualifier="embedding"
             ),
             metadata_mappings=[
-                MetadataMapping("color", Encoding.UTF8),
-                MetadataMapping("number", Encoding.INT_BIG_ENDIAN),
-                MetadataMapping("is_good", Encoding.BOOL),
-                MetadataMapping("rating", Encoding.FLOAT),
+                VectorMetadataMapping("color", Encoding.UTF8),
+                VectorMetadataMapping("number", Encoding.INT_BIG_ENDIAN),
+                VectorMetadataMapping("is_good", Encoding.BOOL),
+                VectorMetadataMapping("rating", Encoding.FLOAT),
             ],
             collection=TEST_ROW_PREFIX,
         )
@@ -169,10 +169,10 @@ class TestAdvancedFeatures:
                 column_family=METADATA_COLUMN_FAMILY, column_qualifier="metadata_json"
             ),
             metadata_mappings=[
-                MetadataMapping("color", Encoding.UTF8),
-                MetadataMapping("number", Encoding.INT_BIG_ENDIAN),
-                MetadataMapping("is_good", Encoding.BOOL),
-                MetadataMapping("rating", Encoding.FLOAT),
+                VectorMetadataMapping("color", Encoding.UTF8),
+                VectorMetadataMapping("number", Encoding.INT_BIG_ENDIAN),
+                VectorMetadataMapping("is_good", Encoding.BOOL),
+                VectorMetadataMapping("rating", Encoding.FLOAT),
             ],
             collection=TEST_ROW_PREFIX,
         )
@@ -206,14 +206,14 @@ class TestAdvancedFeatures:
                 column_family=EMBEDDING_COLUMN_FAMILY, column_qualifier="embedding"
             ),
             metadata_mappings=[
-                MetadataMapping("md_utf8", Encoding.UTF8),
-                MetadataMapping("md_utf16", Encoding.UTF16),
-                MetadataMapping("md_ascii", Encoding.ASCII),
-                MetadataMapping("md_int_le", Encoding.INT_LITTLE_ENDIAN),
-                MetadataMapping("md_int_be", Encoding.INT_BIG_ENDIAN),
-                MetadataMapping("md_double", Encoding.DOUBLE),
-                MetadataMapping("md_float", Encoding.FLOAT),
-                MetadataMapping("md_bool", Encoding.BOOL),
+                VectorMetadataMapping("md_utf8", Encoding.UTF8),
+                VectorMetadataMapping("md_utf16", Encoding.UTF16),
+                VectorMetadataMapping("md_ascii", Encoding.ASCII),
+                VectorMetadataMapping("md_int_le", Encoding.INT_LITTLE_ENDIAN),
+                VectorMetadataMapping("md_int_be", Encoding.INT_BIG_ENDIAN),
+                VectorMetadataMapping("md_double", Encoding.DOUBLE),
+                VectorMetadataMapping("md_float", Encoding.FLOAT),
+                VectorMetadataMapping("md_bool", Encoding.BOOL),
             ],
             collection=TEST_ROW_PREFIX,
         )
