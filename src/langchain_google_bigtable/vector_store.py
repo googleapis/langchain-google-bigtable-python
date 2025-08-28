@@ -64,8 +64,7 @@ def init_vector_store_table(
 ) -> None:
     """Creates a Bigtable table with the necessary column families for the vector store.
 
-    This function is idempotent; it will not fail if the table already exists. It
-    always creates the "md" column family for metadata and allows you to specify
+    It always creates the "md" column family for metadata and allows you to specify
     the name of the column family used for content and embeddings.
 
     Args:
