@@ -69,7 +69,13 @@ Windows
 Vector Store Usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Use `BigtableVectorStore` to store and query documents.
+Use `BigtableVectorStore` to store documents and their vector embeddings, allowing you to search for the most similar or relevant documents from your database.
+
+* **Full ``VectorStore`` Implementation:** Supports all methods from the LangChain `VectorStore` abstract class.
+* **Async/Sync Support:** All methods are available in both asynchronous and synchronous versions.
+* **Metadata Filtering:** Supports filtering on metadata fields, including logical AND/OR combinations.
+* **Multiple Distance Strategies:** Supports both Cosine and Euclidean distance for similarity search.
+* **Customizable Storage:** Full control over how content, embeddings, and metadata are stored in Bigtable columns.
 
 .. code-block:: python
 
@@ -89,7 +95,7 @@ Use `BigtableVectorStore` to store and query documents.
 
 See the full `Vector Store`_ tutorial.
 
-.. _`Vector Store`: [https://colab.research.google.com/github/googleapis/langchain-google-bigtable-python/blob/main/docs/vector_store.ipynb](https://colab.research.google.com/github/googleapis/langchain-google-bigtable-python/blob/main/docs/vector_store.ipynb)
+.. _`Vector Store`: https://colab.research.google.com/github/googleapis/langchain-google-bigtable-python/blob/main/docs/vector_store.ipynb
 
 Key-value Store Usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
