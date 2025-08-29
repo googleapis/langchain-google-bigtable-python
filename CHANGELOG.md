@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.8.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.7.0...v0.8.0) (2025-08-29)
+
+
+### Features
+
+* Add BigtableVectorStore Playground notebook. ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Add BigtableVectorStore Playground notebook. ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Add playground notebook for the vector store ([#191](https://github.com/googleapis/langchain-google-bigtable-python/issues/191)) ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Change documentation for the library ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Update documentation for the library ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Update documentation for the library ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Update documentation for the library ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+
+
+### Bug Fixes
+
+* Make sure the typing_extensions is supported across all python versions supported by this library ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Update vector_store.ipynb ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Update vector_store.ipynb ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Update vector_store.ipynb ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Update vector_store.ipynb ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+* Update vector_store.ipynb ([d85f4cc](https://github.com/googleapis/langchain-google-bigtable-python/commit/d85f4cc29b8ff89a5431a31fb876f62ca6604ac7))
+
 ## [0.7.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.6.0...v0.7.0) (2025-08-28)
 
 
