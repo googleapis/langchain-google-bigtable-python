@@ -10,6 +10,7 @@ API Reference
   langchain_google_bigtable/history
   langchain_google_bigtable/engine
   langchain_google_bigtable/key_value_store
+  langchain_google_bigtable/vector_store
 
 Changelog
 ---------
