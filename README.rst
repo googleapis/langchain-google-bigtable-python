@@ -66,6 +66,37 @@ Windows
    <your-env>\Scripts\activate
    <your-env>\Scripts\pip.exe install langchain-google-bigtable
 
+Vector Store Usage
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use ``BigtableVectorStore`` to store documents and their vector embeddings, allowing you to search for the most similar or relevant documents from your database.
+
+* **Full VectorStore Implementation:** Supports all methods from the LangChain ``VectorStore`` abstract class.
+* **Async/Sync Support:** All methods are available in both asynchronous and synchronous versions.
+* **Metadata Filtering:** Supports filtering on metadata fields, including logical AND/OR combinations and filtering on document IDs with a specific prefix.
+* **Multiple Distance Strategies:** Supports both Cosine and Euclidean distance for similarity search.
+* **Customizable Storage:** Full control over how content, embeddings, and metadata are stored in Bigtable columns.
+
+.. code-block:: python
+
+    from langchain_google_bigtable import BigtableVectorStore, BigtableEngine
+
+    # Your embedding service and other configurations
+    # embedding_service = ...
+
+    engine = await BigtableEngine.async_initialize(project_id="your-project-id")
+    vector_store = await BigtableVectorStore.create(
+        engine=engine,
+        instance_id="your-instance-id",
+        table_id="your-table-id",
+        embedding_service=embedding_service,
+        collection="your_collection_name",
+    )
+
+See the full `Vector Store`_ tutorial.
+
+.. _`Vector Store`: https://colab.research.google.com/github/googleapis/langchain-google-bigtable-python/blob/main/docs/vector_store.ipynb
+
 Key-value Store Usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
