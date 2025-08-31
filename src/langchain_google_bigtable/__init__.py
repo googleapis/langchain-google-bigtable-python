@@ -28,9 +28,13 @@ from .loader import (
     MetadataMapping,
     init_document_table,
 )
+from .execute_query_tool import BigtableExecuteQueryTool
+from .get_instances_and_table_schema_tool import BigtableGetInstancesAndTableSchemaTool
 from .version import __version__
 
 __all__ = [
+    "BigtableGetInstancesAndTableSchemaTool",
+    "BigtableExecuteQueryTool",
     "BigtableChatMessageHistory",
     "create_chat_history_table",
     "init_document_table",
