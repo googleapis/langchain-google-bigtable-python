@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.8.0...v0.8.1) (2025-09-02)
+
+
+### Bug Fixes
+
+* Fix formatting issue with playground ([#194](https://github.com/googleapis/langchain-google-bigtable-python/issues/194)) ([9506fe3](https://github.com/googleapis/langchain-google-bigtable-python/commit/9506fe31e246a121d68dd955e9097447b812cf11))
+
 ## [0.8.0](https://github.com/googleapis/langchain-google-bigtable-python/compare/v0.7.0...v0.8.0) (2025-08-29)
 
 
