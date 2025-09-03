@@ -1,47 +1,10 @@
-import functools
-import sys
-import os
-from typing import Generator, Iterator, List
+
+from typing import Iterator, List
 import uuid
 import pytest
-from google.cloud.bigtable.data import BigtableDataClient, Table
 from google.cloud import bigtable
 from langchain_google_bigtable.execute_query_tool import BigtableExecuteQueryTool
 
-
-def get_env_var(key: str, desc: str) -> str:
-    v = os.environ.get(key)
-    if v is None:
-        raise ValueError(f"Must set env var {key} to: {desc}")
-    return v
-
-@pytest.fixture(scope="session")
-def project_id() -> str:
-    return get_env_var("PROJECT_ID", "GCP Project ID")
-
-@pytest.fixture(scope="session")
-def instance_id() -> str:
-    return get_env_var("INSTANCE_ID", "Bigtable Instance ID")
-
-@pytest.fixture(scope="session")
-def admin_client(project_id: str):
-    """
-    Fixture to create a Bigtable client.
-    """
-    client = bigtable.Client(project=project_id, admin=True)
-    yield client
-
-@pytest.fixture(scope="session")
-def data_client(project_id: str):
-    """
-    Fixture to create a Bigtable client.
-    """
-    try:
-        client = BigtableDataClient(project=project_id, admin=True)
-        yield client
-    finally:
-        client.close()
-    
 
 @pytest.fixture
 def expected_data():
@@ -111,7 +74,7 @@ def expected_data():
 
 @pytest.fixture(scope="session")
 def managed_table(
-    project_id: str, instance_id: instance_id, admin_client: admin_client
+    project_id, instance_id, admin_client
 ) -> Iterator[tuple[str, str, List[str]]]:
     """
     Fixture to create a Bigtable table and insert data.
@@ -156,14 +119,13 @@ def managed_table(
 
 
 def test_execute_query_tool(
-    managed_table: Iterator[tuple[str, str, List[str]]], expected_data: List[dict], data_client: data_client
-):
+    managed_table: Iterator[tuple[str, str, List[str]]], expected_data: List[dict], sync_data_client):
     """
     Test the synchronous ExecuteQueryTool functionality.
     """
     instance_id, table_id, column_families = managed_table
 
-    tool = BigtableExecuteQueryTool(client=data_client)
+    tool = BigtableExecuteQueryTool(sync_client = sync_data_client)
     query = f"SELECT * FROM `{table_id}`"
     
     input_data = {"instance_id": instance_id, "query": query}
@@ -171,14 +133,14 @@ def test_execute_query_tool(
 
     assert result == expected_data
 
-def test_execute_query_tool_error(managed_table: Iterator[tuple[str, str, List[str]]], project_id: str, data_client: data_client):
+def test_execute_query_tool_error(managed_table, project_id, sync_data_client):
     """
     Test the error handling of BigtableExecuteQueryTool when querying a non-existent table.
     """
 
     instance_id, _, _ = managed_table
 
-    tool = BigtableExecuteQueryTool(client=data_client)
+    tool = BigtableExecuteQueryTool(sync_client= sync_data_client)
     query = "SELECT * FROM `non_existent_table`" 
 
     input_data = {"instance_id": instance_id, "query": query}
@@ -188,3 +150,33 @@ def test_execute_query_tool_error(managed_table: Iterator[tuple[str, str, List[s
     assert "Table not found: non_existent_table" in result
 
 
+@pytest.mark.asyncio
+async def test_execute_query_tool_async(managed_table, expected_data, async_data_client):
+    """
+    Test the async ExecuteQueryTool functionality.
+    """
+    instance_id, table_id, column_families = managed_table
+
+    tool = BigtableExecuteQueryTool(async_client=async_data_client)
+    query = f"SELECT * FROM `{table_id}`"
+
+    input_data = {"instance_id": instance_id, "query": query}
+    result = await tool.ainvoke(input=input_data)
+
+    assert result == expected_data
+
+@pytest.mark.asyncio
+async def test_execute_query_tool_error_async(managed_table, async_data_client):
+    """
+    Test the error handling of BigtableExecuteQueryTool (async) when querying a non-existent table.
+    """
+    instance_id, _, _ = managed_table
+
+    tool = BigtableExecuteQueryTool(async_client=async_data_client)
+    query = "SELECT * FROM `non_existent_table`"
+
+    input_data = {"instance_id": instance_id, "query": query}
+    result = await tool.ainvoke(input=input_data)
+
+    assert "Error" in result
+    assert "Table not found: non_existent_table" in result

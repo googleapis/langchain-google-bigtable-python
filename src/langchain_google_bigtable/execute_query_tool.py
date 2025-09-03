@@ -3,6 +3,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from google.cloud.bigtable.data.execute_query import QueryResultRow
 from pydantic import BaseModel, Field
 from google.cloud.bigtable.data import BigtableDataClient
+from google.cloud.bigtable.data import BigtableDataClientAsync
 from langchain_core.tools import BaseTool
 from typing import Type
 import base64
@@ -69,29 +70,46 @@ class BigtableExecuteQueryTool(BaseTool):
     """Tool for executing a query within a Google Bigtable instance."""
 
     name: str = "bigtable_execute_query"
-    # TODO: Play around with the description to see if the description is needed?
     description: str = (
         "A tool for executing a SQL query in Google Bigtable. The following are examples of common queries for Bigtable data:" \
-        "Retrieve the latest version of all columns for a given row key:  SELECT cf1['col1'], cf1['col2'], cf2['col1'] FROM myTable WHERE _key = 'r1';" \
-        "Retrieve all versions of all columns for a given row key: SELECT cf1['col1'], cf1['col2'], cf2['col1'] FROM myTable(with_history => TRUE) WHERE _key = 'r1'"
+        "Retrieve the latest version of some columns for a given row key:  SELECT cf1['col1'], cf1['col2'], cf2['col1'] FROM myTable WHERE _key = 'r1';" \
+        "Retrieve all versions of some columns for a given row key: SELECT cf1['col1'], cf1['col2'], cf2['col1'] FROM myTable(with_history => TRUE) WHERE _key = 'r1'" \
+        "Use SELECT * FROM myTable to retrieve all data from a table if you are not sure of what column to get."
+        "Make sure to set a LIMIT clause, e.g. SELECT * FROM myTable LIMIT 10, to avoid retrieving too much data at once."
     )
     args_schema: Type[BaseModel] = BigtableExecuteQueryInput
     _client: BigtableDataClient
 
-    def __init__(self, client: BigtableDataClient, **kwargs: Any):
+    def __init__(self, sync_client: BigtableDataClient = None , async_client: BigtableDataClientAsync = None, **kwargs: Any):
         """Initialize with a Bigtable Data client."""
         super().__init__(**kwargs)
-        self._client = client
+        if not sync_client and not async_client:
+            raise ValueError("Either sync_client or async_client must be provided.")
+        self._sync_client = sync_client
+        self._async_client = async_client
 
     def _run(self, instance_id: str, query: str) -> Any:
         """
         Run execute query with the Bigtable Data client
         """
+        if not self._sync_client:
+            raise ValueError("sync client was not provided.")
         try:
             rows = []
-            for row in self._client.execute_query(query, instance_id):
+            for row in self._sync_client.execute_query(query, instance_id):
                 rows.append(row_to_dict(row))
             return rows
         except Exception as e:
             return f"Error: {str(e)}"
 
+    async def _arun(self, instance_id: str, query: str) -> Any:
+            if not self._async_client:
+                raise RuntimeError("Async client not provided.")
+            try:
+                rows = []
+                result = await self._async_client.execute_query(query, instance_id)
+                async for row in result:
+                    rows.append(row_to_dict(row))
+                return rows
+            except Exception as e:
+                return f"Error: {str(e)}"

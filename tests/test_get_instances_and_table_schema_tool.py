@@ -1,45 +1,8 @@
-import os
-import sys
 import pytest
 from google.cloud import bigtable
 from langchain_google_bigtable.get_instances_and_table_schema_tool import BigtableGetInstancesAndTableSchemaTool
 from typing import Generator
 import uuid
-
-
-def get_env_var(key: str, desc: str) -> str:
-    """
-    Retrieve an environment variable or raise an error if not set.
-    """
-    v = os.environ.get(key)
-    if v is None:
-        raise ValueError(f"Must set env var {key} to: {desc}")
-    return v
-
-
-@pytest.fixture(scope="session")
-def project_id() -> str:
-    """
-    Fixture to retrieve the GCP project ID from the environment.
-    """
-    return get_env_var("PROJECT_ID", "GCP Project ID")
-
-
-@pytest.fixture(scope="session")
-def instance_id() -> str:
-    """
-    Fixture to retrieve the Bigtable instance ID from the environment.
-    """
-    return get_env_var("INSTANCE_ID", "Bigtable Instance ID")
-
-
-@pytest.fixture(scope="session")
-def admin_client(project_id: str):
-    """
-    Fixture to create a Bigtable client.
-    """
-    client = bigtable.Client(project=project_id, admin=True)
-    yield client
 
 
 @pytest.fixture(scope="session")
