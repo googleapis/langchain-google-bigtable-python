@@ -1,13 +1,11 @@
 from __future__ import annotations
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from google.cloud.bigtable.data.execute_query import QueryResultRow
 from pydantic import BaseModel, Field
-from google.cloud.bigtable.data import BigtableDataClient
-from google.cloud.bigtable.data import BigtableDataClientAsync
 from langchain_core.tools import BaseTool
 from typing import Type
 import base64
-
+from langchain_google_bigtable.engine import BigtableEngine 
 
 def try_convert_bytes_to_str(x: Any) -> Any:
     """
@@ -78,38 +76,26 @@ class BigtableExecuteQueryTool(BaseTool):
         "Make sure to set a LIMIT clause, e.g. SELECT * FROM myTable LIMIT 10, to avoid retrieving too much data at once."
     )
     args_schema: Type[BaseModel] = BigtableExecuteQueryInput
-    _client: BigtableDataClient
 
-    def __init__(self, sync_client: BigtableDataClient = None , async_client: BigtableDataClientAsync = None, **kwargs: Any):
-        """Initialize with a Bigtable Data client."""
+    def __init__(self, engine: BigtableEngine, **kwargs: Any):
         super().__init__(**kwargs)
-        if not sync_client and not async_client:
-            raise ValueError("Either sync_client or async_client must be provided.")
-        self._sync_client = sync_client
-        self._async_client = async_client
+        self._engine = engine
+
+    async def _execute_query_internal(self, instance_id: str, query: str) -> Any:
+        result = await self._engine.async_client.execute_query(query, instance_id)
+        rows = []
+        async for row in result:
+            rows.append(row_to_dict(row))
+        return rows
 
     def _run(self, instance_id: str, query: str) -> Any:
-        """
-        Run execute query with the Bigtable Data client
-        """
-        if not self._sync_client:
-            raise ValueError("sync client was not provided.")
-        try:
-            rows = []
-            for row in self._sync_client.execute_query(query, instance_id):
-                rows.append(row_to_dict(row))
-            return rows
-        except Exception as e:
-            return f"Error: {str(e)}"
+        return self._engine._run_as_sync(self._execute_query_internal(instance_id, query))
 
     async def _arun(self, instance_id: str, query: str) -> Any:
-            if not self._async_client:
-                raise RuntimeError("Async client not provided.")
-            try:
-                rows = []
-                result = await self._async_client.execute_query(query, instance_id)
-                async for row in result:
-                    rows.append(row_to_dict(row))
-                return rows
-            except Exception as e:
-                return f"Error: {str(e)}"
+        return await self._engine._run_as_async(self._execute_query_internal(instance_id, query))
+    
+
+
+
+
+

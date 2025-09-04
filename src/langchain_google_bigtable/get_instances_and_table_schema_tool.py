@@ -1,8 +1,7 @@
 from google.cloud.bigtable import Client
 from google.cloud.bigtable.instance import Instance
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional, Type
+from typing import Dict, List, Optional
 from dataclasses import dataclass, field
 from typing import List
 from google.cloud.bigtable.row_data import PartialRowsData

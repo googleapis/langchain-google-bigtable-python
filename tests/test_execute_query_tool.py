@@ -3,7 +3,9 @@ from typing import Iterator, List
 import uuid
 import pytest
 from google.cloud import bigtable
+from langchain_google_bigtable.engine import BigtableEngine
 from langchain_google_bigtable.execute_query_tool import BigtableExecuteQueryTool
+import google.api_core.exceptions
 
 
 @pytest.fixture
@@ -74,7 +76,7 @@ def expected_data():
 
 @pytest.fixture(scope="session")
 def managed_table(
-    project_id, instance_id, admin_client
+    project_id: str, instance_id: str, admin_client: bigtable.Client
 ) -> Iterator[tuple[str, str, List[str]]]:
     """
     Fixture to create a Bigtable table and insert data.
@@ -119,13 +121,12 @@ def managed_table(
 
 
 def test_execute_query_tool(
-    managed_table: Iterator[tuple[str, str, List[str]]], expected_data: List[dict], sync_data_client):
+    managed_table: Iterator[tuple[str, str, List[str]]], expected_data: List[dict], bigtable_engine: BigtableEngine):
     """
     Test the synchronous ExecuteQueryTool functionality.
     """
     instance_id, table_id, column_families = managed_table
-
-    tool = BigtableExecuteQueryTool(sync_client = sync_data_client)
+    tool = BigtableExecuteQueryTool(engine=bigtable_engine)
     query = f"SELECT * FROM `{table_id}`"
     
     input_data = {"instance_id": instance_id, "query": query}
@@ -133,31 +134,30 @@ def test_execute_query_tool(
 
     assert result == expected_data
 
-def test_execute_query_tool_error(managed_table, project_id, sync_data_client):
+def test_execute_query_tool_error(managed_table:Iterator[tuple[str, str, List[str]]], bigtable_engine: BigtableEngine):
     """
     Test the error handling of BigtableExecuteQueryTool when querying a non-existent table.
     """
 
     instance_id, _, _ = managed_table
 
-    tool = BigtableExecuteQueryTool(sync_client= sync_data_client)
+    tool = BigtableExecuteQueryTool(engine=bigtable_engine)
     query = "SELECT * FROM `non_existent_table`" 
 
     input_data = {"instance_id": instance_id, "query": query}
-    result = tool.invoke(input=input_data)
-
-    assert "Error" in result
-    assert "Table not found: non_existent_table" in result
+    with pytest.raises(google.api_core.exceptions.InvalidArgument) as excinfo:
+        tool.invoke(input=input_data)
+    assert "Table not found: non_existent_table" in str(excinfo.value)
 
 
 @pytest.mark.asyncio
-async def test_execute_query_tool_async(managed_table, expected_data, async_data_client):
+async def test_execute_query_tool_async(managed_table: Iterator[tuple[str, str, List[str]]], expected_data: List[dict], bigtable_engine: BigtableEngine):
     """
     Test the async ExecuteQueryTool functionality.
     """
     instance_id, table_id, column_families = managed_table
 
-    tool = BigtableExecuteQueryTool(async_client=async_data_client)
+    tool = BigtableExecuteQueryTool(engine=bigtable_engine)
     query = f"SELECT * FROM `{table_id}`"
 
     input_data = {"instance_id": instance_id, "query": query}
@@ -166,17 +166,16 @@ async def test_execute_query_tool_async(managed_table, expected_data, async_data
     assert result == expected_data
 
 @pytest.mark.asyncio
-async def test_execute_query_tool_error_async(managed_table, async_data_client):
+async def test_execute_query_tool_error_async(managed_table: Iterator[tuple[str, str, List[str]]], bigtable_engine: BigtableEngine):
     """
     Test the error handling of BigtableExecuteQueryTool (async) when querying a non-existent table.
     """
     instance_id, _, _ = managed_table
 
-    tool = BigtableExecuteQueryTool(async_client=async_data_client)
+    tool = BigtableExecuteQueryTool(engine=bigtable_engine)
     query = "SELECT * FROM `non_existent_table`"
 
     input_data = {"instance_id": instance_id, "query": query}
-    result = await tool.ainvoke(input=input_data)
-
-    assert "Error" in result
-    assert "Table not found: non_existent_table" in result
+    with pytest.raises(google.api_core.exceptions.InvalidArgument) as excinfo:
+        await tool.ainvoke(input=input_data)
+    assert "Table not found: non_existent_table" in str(excinfo.value)

@@ -47,7 +47,7 @@ def managed_table(
             table.delete()
 
 
-def test_get_instances_and_table_schema_tool(admin_client, managed_table, instance_id):
+def test_get_instances_and_table_schema_tool(admin_client: bigtable.Client, managed_table: Generator[str, None, None], instance_id: str):
     """
     Test the synchronous GetInstancesAndTableSchemaTool functionality.
     """
