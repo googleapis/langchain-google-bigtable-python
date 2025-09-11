@@ -36,14 +36,14 @@ from .loader import (
     MetadataMapping,
     init_document_table,
 )
-from .execute_query_tool import BigtableExecuteQueryTool
-from .get_instances_and_table_schema_tool import BigtableGetInstancesAndTableSchemaTool
+from .execute_query_tools import BigtableExecuteQueryTool
+from .execute_query_tools import PresetBigtableExecuteQueryTool
 from .vector_store import BigtableVectorStore, init_vector_store_table
 from .version import __version__
 
 __all__ = [
-    "BigtableGetInstancesAndTableSchemaTool",
     "BigtableExecuteQueryTool",
+    "PresetBigtableExecuteQueryTool",
     "BigtableChatMessageHistory",
     "create_chat_history_table",
     "init_document_table",
