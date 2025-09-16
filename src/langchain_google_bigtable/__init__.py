@@ -36,8 +36,7 @@ from .loader import (
     MetadataMapping,
     init_document_table,
 )
-from .execute_query_tools import BigtableExecuteQueryTool
-from .execute_query_tools import PresetBigtableExecuteQueryTool
+from .execute_query_tools import BigtableExecuteQueryTool, PresetBigtableExecuteQueryTool
 from .vector_store import BigtableVectorStore, init_vector_store_table
 from .version import __version__
 

@@ -178,7 +178,7 @@ async def test_execute_query_tool_error_async(managed_table: Iterator[tuple[str,
         await tool.ainvoke(input=input_data)
     assert "Table not found: non_existent_table" in str(excinfo.value)
 
-def test_Preset_bigtable_execute_query_tool_sync(managed_table: Iterator[tuple[str, str, List[str]]], expected_data: List[dict], bigtable_engine: BigtableEngine):
+def test_preset_bigtable_execute_query_tool_sync(managed_table: Iterator[tuple[str, str, List[str]]], expected_data: List[dict], bigtable_engine: BigtableEngine):
     """
     Test the synchronous PresetBigtableExecuteQueryTool functionality.
     """
@@ -189,7 +189,7 @@ def test_Preset_bigtable_execute_query_tool_sync(managed_table: Iterator[tuple[s
     result = tool.invoke(input={})
     assert result == expected_data
 
-def test_Preset_bigtable_execute_query_tool_error_sync(managed_table, bigtable_engine):
+def test_preset_bigtable_execute_query_tool_error_sync(managed_table, bigtable_engine):
     """
     Test error handling of PresetBigtableExecuteQueryTool when querying a non-existent table.
     """
@@ -201,19 +201,19 @@ def test_Preset_bigtable_execute_query_tool_error_sync(managed_table, bigtable_e
     assert "Table not found: non_existent_table" in str(excinfo.value)
 
 @pytest.mark.asyncio
-async def test_Preset_bigtable_execute_query_tool_async(managed_table: Iterator[tuple[str, str, List[str]]], expected_data: List[dict], bigtable_engine: BigtableEngine):
+async def test_preset_bigtable_execute_query_tool_async(managed_table: Iterator[tuple[str, str, List[str]]], expected_data: List[dict], bigtable_engine: BigtableEngine):
     """
     Test the async PresetBigtableExecuteQueryTool functionality.
     """
     instance_id, table_id, column_families = managed_table
-    query = f"SELECT * FROM `{table_id}`"
+    query = f"SELECT * FROM `{table_id}` WHERE location=@location"
 
     tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query)
     result = await tool.ainvoke(input={})
     assert result == expected_data
 
 @pytest.mark.asyncio
-async def test_Preset_bigtable_execute_query_tool_error_async(managed_table, bigtable_engine):
+async def test_preset_bigtable_execute_query_tool_error_async(managed_table, bigtable_engine):
     """
     Test async error handling of PresetBigtableExecuteQueryTool when querying a non-existent table.
     """
