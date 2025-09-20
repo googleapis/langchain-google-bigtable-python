@@ -1,9 +1,10 @@
 from __future__ import annotations
+import re
 from typing import Any, Dict, List, Optional, Tuple
 from google.cloud.bigtable.data.execute_query import QueryResultRow
 from pydantic import BaseModel, Field
 from langchain_core.tools import BaseTool
-from typing import Type
+from typing import Type, Any, Optional
 import base64
 from langchain_google_bigtable.engine import BigtableEngine
 import uuid
@@ -101,6 +102,16 @@ class BigtableExecuteQueryTool(BaseTool):
         return await self._engine._run_as_async(self._execute_query_internal(instance_id, query))
     
 
+
+class PresetBigtableQueryInput(BaseModel):
+    """
+    Input for PresetBigtableExecuteQueryTool with parameterized query.
+    """
+    parameters: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Parameters to fill in the query, e.g. {\"min_age\": 18, \"status\": \"active\"}"
+    )
+
 class PresetBigtableExecuteQueryTool(BaseTool):
     """
     A tool for executing a preset SQL query in Google Bigtable. 
@@ -112,11 +123,12 @@ class PresetBigtableExecuteQueryTool(BaseTool):
         "This is a placeholder description; the actual description will be set at initialization."
     )
 
+    args_schema: Type[BaseModel] = PresetBigtableQueryInput
     _engine: BigtableEngine
     _instance_id: str
     _query: str
 
-    def __init__(self, engine: BigtableEngine, instance_id: str, query: str, tool_name: Optional[str] = None, description: Optional[str] = None, **kwargs: Any):
+    def __init__(self, engine: BigtableEngine, instance_id: str, query: str, tool_name: str, description: Optional[str] = None, **kwargs: Any):
         """
         Initialize the tool with a BigtableEngine, instance ID, and fixed query.
         Optionally, a custom tool name and description can be provided.
@@ -126,8 +138,11 @@ class PresetBigtableExecuteQueryTool(BaseTool):
         self._engine = engine
         self._instance_id = instance_id
         self._query = query
+        self.name = tool_name
         default_description = (
-            f"A preset tool for executing a fixed SQL query in Google Bigtable.\n"
+            "A preset tool for executing a fixed or parameterized SQL query in Google Bigtable.\n"
+            "If the query contains parameters (e.g., @location), provide them as a dictionary in the input: {\"location\": \"Basel\"}.\n"
+            "All parameter values should match the type stored in Bigtable (e.g., string for string fields: {\"location\": \"Basel\"}).\n\n"
             f"Instance ID: {instance_id}\n"
             f"Query: {query}\n"
         )
@@ -135,25 +150,33 @@ class PresetBigtableExecuteQueryTool(BaseTool):
             self.description = f"{default_description}\n\nUser Description: {description}"
         else:
             self.description = default_description
+        
+    
+    def _convert_parameters_to_bytes(self, parameters: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """
+        Convert string parameters to bytes, as Bigtable expects byte values. The agent can't provide parameters in bytes.
+        """
+        if parameters is None:
+            return None
+        converted = {}
+        for k, v in parameters.items():
+            if isinstance(v, str):
+                converted[k] = v.encode("utf-8")
+            else:
+                converted[k] = v
+        return converted
 
-        if tool_name is not None:
-            self.name = tool_name
-        else:
-            # Randomly generate a tool name so there's no collision. A collision will confuse the LLM agent, which expects unique tool names.
-            rand_id = uuid.uuid4().hex[:8]
-            self.name = f"preset_bigtable_query_{rand_id}"
-
-
-    async def _execute_query_internal(self) -> Any:
-        result = await self._engine.async_client.execute_query(self._query, self._instance_id)
+    async def _execute_query_internal(self, parameters: Optional[Dict[str, Any]] = None) -> Any:
+        parameters = self._convert_parameters_to_bytes(parameters)
+        result = await self._engine.async_client.execute_query(self._query, self._instance_id, parameters=parameters)
         rows = []
         async for row in result:
             rows.append(row_to_dict(row))
         return rows
 
-    def _run(self) -> Any:
-        return self._engine._run_as_sync(self._execute_query_internal())
+    def _run(self, parameters=None) -> Any:
+        return self._engine._run_as_sync(self._execute_query_internal(parameters=parameters))
 
-    async def _arun(self) -> Any:
-        return await self._engine._run_as_async(self._execute_query_internal())
+    async def _arun(self, parameters=None) -> Any:
+        return await self._engine._run_as_async(self._execute_query_internal(parameters=parameters))
 

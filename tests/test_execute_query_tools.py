@@ -8,6 +8,9 @@ from langchain_google_bigtable.execute_query_tools import BigtableExecuteQueryTo
 from langchain_google_bigtable.execute_query_tools import PresetBigtableExecuteQueryTool
 import google.api_core.exceptions
 
+TOOL_NAME = "hotel_query_tool"
+
+# TODO: Add tests for asserting that tool-calling happens.
 
 @pytest.fixture
 def expected_data():
@@ -184,8 +187,8 @@ def test_preset_bigtable_execute_query_tool_sync(managed_table: Iterator[tuple[s
     """
     instance_id, table_id, column_families = managed_table
     query = f"SELECT * FROM `{table_id}`"
-    
-    tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query)
+
+    tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query, tool_name=TOOL_NAME)
     result = tool.invoke(input={})
     assert result == expected_data
 
@@ -195,7 +198,7 @@ def test_preset_bigtable_execute_query_tool_error_sync(managed_table, bigtable_e
     """
     instance_id, _, _ = managed_table
     query = "SELECT * FROM `non_existent_table`"
-    tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query)
+    tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query, tool_name=TOOL_NAME)
     with pytest.raises(google.api_core.exceptions.InvalidArgument) as excinfo:
         tool.invoke(input={})
     assert "Table not found: non_existent_table" in str(excinfo.value)
@@ -206,9 +209,9 @@ async def test_preset_bigtable_execute_query_tool_async(managed_table: Iterator[
     Test the async PresetBigtableExecuteQueryTool functionality.
     """
     instance_id, table_id, column_families = managed_table
-    query = f"SELECT * FROM `{table_id}` WHERE location=@location"
+    query = f"SELECT * FROM `{table_id}`"
 
-    tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query)
+    tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query, tool_name=TOOL_NAME)
     result = await tool.ainvoke(input={})
     assert result == expected_data
 
@@ -219,7 +222,39 @@ async def test_preset_bigtable_execute_query_tool_error_async(managed_table, big
     """
     instance_id, _, _ = managed_table
     query = "SELECT * FROM `non_existent_table`"
-    tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query)
+    tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query, tool_name=TOOL_NAME)
     with pytest.raises(google.api_core.exceptions.InvalidArgument) as excinfo:
         await tool.ainvoke(input={})
     assert "Table not found: non_existent_table" in str(excinfo.value)
+
+
+def test_preset_bigtable_execute_query_tool_with_parameter_sync(
+    managed_table: Iterator[tuple[str, str, List[str]]], bigtable_engine: BigtableEngine
+):
+    """
+    Test PresetBigtableExecuteQueryTool with a parameterized query.
+    """
+    instance_id, table_id, column_families = managed_table
+    query = f"SELECT * FROM `{table_id}` WHERE cf['location'] = @location"
+    tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query, tool_name=TOOL_NAME)
+    parameters = {"location": "Basel"}
+    result = tool.invoke(input={"parameters": parameters})
+    assert isinstance(result, list)
+    assert all(row["cf"]["location"] == "Basel" for row in result)
+
+
+
+@pytest.mark.asyncio
+async def test_preset_bigtable_execute_query_tool_with_parameter_async(
+    managed_table: Iterator[tuple[str, str, List[str]]], bigtable_engine: BigtableEngine
+):
+    """
+    Test async PresetBigtableExecuteQueryTool with a parameterized query.
+    """
+    instance_id, table_id, column_families = managed_table
+    query = f"SELECT * FROM `{table_id}` WHERE cf['location'] = @location"
+    tool = PresetBigtableExecuteQueryTool(engine=bigtable_engine, instance_id=instance_id, query=query, tool_name=TOOL_NAME)
+    parameters = {"location": "Basel"}
+    result = await tool.ainvoke(input={"parameters": parameters})
+    assert isinstance(result, list)
+    assert all(row["cf"]["location"] == "Basel" for row in result)
