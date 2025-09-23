@@ -118,9 +118,10 @@ class PresetBigtableExecuteQueryTool(BaseTool):
     """
     name: str = "preset_bigtable_execute_query"
     description: str = (
-        "A preset tool for executing a fixed SQL query in Google Bigtable. "
-        "The instance_id and query are set at initialization; no parameters are needed at runtime."
-        "This is a placeholder description; the actual description will be set at initialization."
+        "A preset tool for executing a fixed or parameterized SQL query in Google Bigtable. "
+        "The instance_id and query are set at initialization. "
+        "If the query contains parameters, they can be provided at runtime. "
+        "This is a placeholder description; the actual description will be set during initialization."
     )
 
     args_schema: Type[BaseModel] = PresetBigtableQueryInput
@@ -130,9 +131,8 @@ class PresetBigtableExecuteQueryTool(BaseTool):
 
     def __init__(self, engine: BigtableEngine, instance_id: str, query: str, tool_name: str, description: Optional[str] = None, **kwargs: Any):
         """
-        Initialize the tool with a BigtableEngine, instance ID, and fixed query.
-        Optionally, a custom tool name and description can be provided.
-        The tool name will be auto-generated if not provided.
+        Initialize the tool with a BigtableEngine, instance ID, fixed query, and required tool name.
+        Optionally, a description can be provided.
         """
         super().__init__(**kwargs)
         self._engine = engine
