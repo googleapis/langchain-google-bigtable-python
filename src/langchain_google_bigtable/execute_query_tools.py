@@ -1,3 +1,16 @@
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional, Tuple
@@ -8,6 +21,7 @@ from typing import Type, Any, Optional
 import base64
 from langchain_google_bigtable.engine import BigtableEngine
 import uuid
+
 
 def try_convert_bytes_to_str(x: Any) -> Any:
     """
@@ -76,9 +90,9 @@ class BigtableExecuteQueryTool(BaseTool):
 
     name: str = "bigtable_execute_query"
     description: str = (
-        "A tool for executing a SQL query in Google Bigtable. The following are examples of common queries for Bigtable data:" \
-        "Retrieve the latest version of some columns for a given row key:  SELECT cf1['col1'], cf1['col2'], cf2['col1'] FROM myTable WHERE _key = 'r1';" \
-        "Retrieve all versions of some columns for a given row key: SELECT cf1['col1'], cf1['col2'], cf2['col1'] FROM myTable(with_history => TRUE) WHERE _key = 'r1'" \
+        "A tool for executing a SQL query in Google Bigtable. The following are examples of common queries for Bigtable data:"
+        "Retrieve the latest version of some columns for a given row key:  SELECT cf1['col1'], cf1['col2'], cf2['col1'] FROM myTable WHERE _key = 'r1';"
+        "Retrieve all versions of some columns for a given row key: SELECT cf1['col1'], cf1['col2'], cf2['col1'] FROM myTable(with_history => TRUE) WHERE _key = 'r1'"
         "Use SELECT * FROM myTable to retrieve all data from a table if you are not sure of what column to get."
         "Make sure to set a LIMIT clause, e.g. SELECT * FROM myTable LIMIT 10, to avoid retrieving too much data at once."
     )
@@ -96,26 +110,32 @@ class BigtableExecuteQueryTool(BaseTool):
         return rows
 
     def _run(self, instance_id: str, query: str) -> Any:
-        return self._engine._run_as_sync(self._execute_query_internal(instance_id, query))
+        return self._engine._run_as_sync(
+            self._execute_query_internal(instance_id, query)
+        )
 
     async def _arun(self, instance_id: str, query: str) -> Any:
-        return await self._engine._run_as_async(self._execute_query_internal(instance_id, query))
-    
+        return await self._engine._run_as_async(
+            self._execute_query_internal(instance_id, query)
+        )
 
 
 class PresetBigtableQueryInput(BaseModel):
     """
     Input for PresetBigtableExecuteQueryTool with parameterized query.
     """
+
     parameters: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Parameters to fill in the query, e.g. {\"min_age\": 18, \"status\": \"active\"}"
+        description='Parameters to fill in the query, e.g. {"min_age": 18, "status": "active"}',
     )
+
 
 class PresetBigtableExecuteQueryTool(BaseTool):
     """
-    A tool for executing a preset SQL query in Google Bigtable. 
+    A tool for executing a preset SQL query in Google Bigtable.
     """
+
     name: str = "preset_bigtable_execute_query"
     description: str = (
         "A preset tool for executing a fixed or parameterized SQL query in Google Bigtable. "
@@ -129,7 +149,15 @@ class PresetBigtableExecuteQueryTool(BaseTool):
     _instance_id: str
     _query: str
 
-    def __init__(self, engine: BigtableEngine, instance_id: str, query: str, tool_name: str, description: Optional[str] = None, **kwargs: Any):
+    def __init__(
+        self,
+        engine: BigtableEngine,
+        instance_id: str,
+        query: str,
+        tool_name: str,
+        description: Optional[str] = None,
+        **kwargs: Any,
+    ):
         """
         Initialize the tool with a BigtableEngine, instance ID, fixed query, and required tool name.
         Optionally, a description can be provided.
@@ -141,18 +169,21 @@ class PresetBigtableExecuteQueryTool(BaseTool):
         self.name = tool_name
         default_description = (
             "A preset tool for executing a fixed or parameterized SQL query in Google Bigtable.\n"
-            "If the query contains parameters (e.g., @location), provide them as a dictionary in the input: {\"location\": \"Basel\"}.\n"
-            "All parameter values should match the type stored in Bigtable (e.g., string for string fields: {\"location\": \"Basel\"}).\n\n"
+            'If the query contains parameters (e.g., @location), provide them as a dictionary in the input: {"location": "Basel"}.\n'
+            'All parameter values should match the type stored in Bigtable (e.g., string for string fields: {"location": "Basel"}).\n\n'
             f"Instance ID: {instance_id}\n"
             f"Query: {query}\n"
         )
         if description is not None:
-            self.description = f"{default_description}\n\nUser Description: {description}"
+            self.description = (
+                f"{default_description}\n\nUser Description: {description}"
+            )
         else:
             self.description = default_description
-        
-    
-    def _convert_parameters_to_bytes(self, parameters: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+
+    def _convert_parameters_to_bytes(
+        self, parameters: Optional[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
         """
         Convert string parameters to bytes, as Bigtable expects byte values. The agent can't provide parameters in bytes.
         """
@@ -166,17 +197,24 @@ class PresetBigtableExecuteQueryTool(BaseTool):
                 converted[k] = v
         return converted
 
-    async def _execute_query_internal(self, parameters: Optional[Dict[str, Any]] = None) -> Any:
+    async def _execute_query_internal(
+        self, parameters: Optional[Dict[str, Any]] = None
+    ) -> Any:
         parameters = self._convert_parameters_to_bytes(parameters)
-        result = await self._engine.async_client.execute_query(self._query, self._instance_id, parameters=parameters)
+        result = await self._engine.async_client.execute_query(
+            self._query, self._instance_id, parameters=parameters
+        )
         rows = []
         async for row in result:
             rows.append(row_to_dict(row))
         return rows
 
     def _run(self, parameters=None) -> Any:
-        return self._engine._run_as_sync(self._execute_query_internal(parameters=parameters))
+        return self._engine._run_as_sync(
+            self._execute_query_internal(parameters=parameters)
+        )
 
     async def _arun(self, parameters=None) -> Any:
-        return await self._engine._run_as_async(self._execute_query_internal(parameters=parameters))
-
+        return await self._engine._run_as_async(
+            self._execute_query_internal(parameters=parameters)
+        )
