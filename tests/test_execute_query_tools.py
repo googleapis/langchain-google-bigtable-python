@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import uuid
-from typing import Iterator, List
+from typing import List, Tuple, Iterator
 
 import google.api_core.exceptions
 import pytest
@@ -30,7 +30,7 @@ TOOL_NAME = "hotel_query_tool"
 
 
 @pytest.fixture
-def expected_data():
+def expected_data() -> List[dict]:
     return [
         {
             "_key": "hotels#1#Basel#Hilton Basel#Luxury",
@@ -98,7 +98,7 @@ def expected_data():
 @pytest.fixture(scope="session")
 def managed_table(
     project_id: str, instance_id: str, admin_client: bigtable.Client
-) -> Iterator[tuple[str, str, List[str]]]:
+) -> Iterator[Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]]]:
     """
     Fixture to create a Bigtable table and insert data.
     """
@@ -192,10 +192,10 @@ def managed_table(
 
 
 def test_execute_query_tool_sync(
-    managed_table: Iterator[tuple[str, str, List[str]]],
+    managed_table: Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]],
     expected_data: List[dict],
     bigtable_engine: BigtableEngine,
-):
+) -> None:
     """
     Test the synchronous ExecuteQueryTool functionality.
     """
@@ -210,8 +210,9 @@ def test_execute_query_tool_sync(
 
 
 def test_execute_query_tool_error_sync(
-    managed_table: Iterator[tuple[str, str, List[str]]], bigtable_engine: BigtableEngine
-):
+    managed_table: Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]],
+    bigtable_engine: BigtableEngine,
+) -> None:
     """
     Test the error handling of BigtableExecuteQueryTool when querying a non-existent table.
     """
@@ -229,10 +230,10 @@ def test_execute_query_tool_error_sync(
 
 @pytest.mark.asyncio
 async def test_execute_query_tool_async(
-    managed_table: Iterator[tuple[str, str, List[str]]],
+    managed_table: Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]],
     expected_data: List[dict],
     bigtable_engine: BigtableEngine,
-):
+) -> None:
     """
     Test the async ExecuteQueryTool functionality.
     """
@@ -249,8 +250,9 @@ async def test_execute_query_tool_async(
 
 @pytest.mark.asyncio
 async def test_execute_query_tool_error_async(
-    managed_table: Iterator[tuple[str, str, List[str]]], bigtable_engine: BigtableEngine
-):
+    managed_table: Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]],
+    bigtable_engine: BigtableEngine,
+) -> None:
     """
     Test the error handling of BigtableExecuteQueryTool (async) when querying a non-existent table.
     """
@@ -266,10 +268,10 @@ async def test_execute_query_tool_error_async(
 
 
 def test_preset_bigtable_execute_query_tool_sync(
-    managed_table: Iterator[tuple[str, str, List[str]]],
+    managed_table: Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]],
     expected_data: List[dict],
     bigtable_engine: BigtableEngine,
-):
+) -> None:
     """
     Test the synchronous PresetBigtableExecuteQueryTool functionality.
     """
@@ -286,7 +288,10 @@ def test_preset_bigtable_execute_query_tool_sync(
     assert result == expected_data
 
 
-def test_preset_bigtable_execute_query_tool_error_sync(managed_table, bigtable_engine):
+def test_preset_bigtable_execute_query_tool_error_sync(
+    managed_table: Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]],
+    bigtable_engine: BigtableEngine,
+) -> None:
     """
     Test error handling of PresetBigtableExecuteQueryTool when querying a non-existent table.
     """
@@ -305,10 +310,10 @@ def test_preset_bigtable_execute_query_tool_error_sync(managed_table, bigtable_e
 
 @pytest.mark.asyncio
 async def test_preset_bigtable_execute_query_tool_async(
-    managed_table: Iterator[tuple[str, str, List[str]]],
+    managed_table: Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]],
     expected_data: List[dict],
     bigtable_engine: BigtableEngine,
-):
+) -> None:
     """
     Test the async PresetBigtableExecuteQueryTool functionality.
     """
@@ -327,8 +332,9 @@ async def test_preset_bigtable_execute_query_tool_async(
 
 @pytest.mark.asyncio
 async def test_preset_bigtable_execute_query_tool_error_async(
-    managed_table, bigtable_engine
-):
+    managed_table: Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]],
+    bigtable_engine: BigtableEngine,
+) -> None:
     """
     Test async error handling of PresetBigtableExecuteQueryTool when querying a non-existent table.
     """
@@ -346,8 +352,9 @@ async def test_preset_bigtable_execute_query_tool_error_async(
 
 
 def test_preset_bigtable_execute_query_tool_with_parameter_sync(
-    managed_table: Iterator[tuple[str, str, List[str]]], bigtable_engine: BigtableEngine
-):
+    managed_table: Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]],
+    bigtable_engine: BigtableEngine,
+) -> None:
     """
     Test PresetBigtableExecuteQueryTool with a parameterized query.
     """
@@ -367,8 +374,9 @@ def test_preset_bigtable_execute_query_tool_with_parameter_sync(
 
 @pytest.mark.asyncio
 async def test_preset_bigtable_execute_query_tool_with_parameter_async(
-    managed_table: Iterator[tuple[str, str, List[str]]], bigtable_engine: BigtableEngine
-):
+    managed_table: Tuple[str, str, dict[str, bigtable.column_family.MaxVersionsGCRule]],
+    bigtable_engine: BigtableEngine,
+) -> None:
     """
     Test async PresetBigtableExecuteQueryTool with a parameterized query.
     """

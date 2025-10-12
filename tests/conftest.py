@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+from typing import Generator
 
 import pytest
-import pytest_asyncio
 from google.cloud import bigtable
 
 from langchain_google_bigtable.engine import BigtableEngine
@@ -43,7 +43,7 @@ def instance_id() -> str:
 
 
 @pytest.fixture(scope="session")
-def admin_client(project_id: str):
+def admin_client(project_id: str) -> Generator[bigtable.Client, None, None]:
     """
     Fixture to create a Bigtable client.
     """
@@ -51,8 +51,8 @@ def admin_client(project_id: str):
     yield client
 
 
-@pytest_asyncio.fixture(scope="session")
-def bigtable_engine(project_id):
+@pytest.fixture(scope="session")
+def bigtable_engine(project_id: str) -> BigtableEngine:
     """
     Fixture to create a BigtableEngine instance for testing.
     """

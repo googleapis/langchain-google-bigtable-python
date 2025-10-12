@@ -14,8 +14,6 @@
 from __future__ import annotations
 
 import base64
-import re
-import uuid
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from google.cloud.bigtable.data.execute_query import QueryResultRow
@@ -65,14 +63,22 @@ def row_to_dict(row: QueryResultRow) -> Dict[str, Any]:
       (Docs: https://cloud.google.com/bigtable/docs/overview)
     - This function normalizes that structure into a nested dict and converts bytes to strings.
     """
+
     fields: Optional[List[Tuple[Optional[str], Any]]] = getattr(row, "fields", None)
     """ We treat `fields` as a list of (name, value) pairs
         The first entry "_key" stores the row key,
         and the other entries hold the column families and their values.
     """
     out: Dict[str, Any] = {}
+    if fields is None:
+        return out
+
     for idx, (name, value) in enumerate(fields):
-        out[name] = unpack_value(value)
+        if name is None:
+            key = f"column_{idx}"
+        else:
+            key = name
+        out[key] = unpack_value(value)
     return out
 
 
@@ -211,12 +217,12 @@ class PresetBigtableExecuteQueryTool(BaseTool):
             rows.append(row_to_dict(row))
         return rows
 
-    def _run(self, parameters=None) -> Any:
+    def _run(self, parameters: Optional[Dict[str, Any]] = None) -> Any:
         return self._engine._run_as_sync(
             self._execute_query_internal(parameters=parameters)
         )
 
-    async def _arun(self, parameters=None) -> Any:
+    async def _arun(self, parameters: Optional[Dict[str, Any]] = None) -> Any:
         return await self._engine._run_as_async(
             self._execute_query_internal(parameters=parameters)
         )
