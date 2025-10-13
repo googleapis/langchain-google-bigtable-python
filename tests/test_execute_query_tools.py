@@ -183,6 +183,7 @@ def managed_table(
                 mutations.append(mutation)
             for mutation in mutations:
                 batcher.mutate(mutation)
+            batcher.flush()
 
             yield instance_id, table_id, column_families
 
