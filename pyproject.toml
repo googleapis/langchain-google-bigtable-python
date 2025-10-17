@@ -9,7 +9,7 @@ authors = [
     {name = "Google LLC", email = "googleapis-packages@google.com"}
 ]
 dependencies = [
-    "langchain-core>=0.1.1, <1.0.0",
+    "langchain-core>=1.0.0, <1.1.0",
     "google-cloud-bigtable>=2.22.0, <3.0.0",
     "deprecated>=1.2.14, <2.0.0",
     "typing-extensions>=4.12.0",
