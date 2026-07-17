@@ -1,4 +1,4 @@
 assign_issues:
-  - googleapis/langchain-bigtable
+  - googleapis/langchain-bigtable-team
 assign_prs:
-  - googleapis/langchain-bigtable
+  - googleapis/langchain-bigtable-team

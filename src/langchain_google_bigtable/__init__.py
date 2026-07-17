@@ -14,12 +14,24 @@
 
 
 from .async_key_value_store import AsyncBigtableByteStore
+from .async_vector_store import (
+    AsyncBigtableVectorStore,
+    ColumnConfig,
+    DistanceStrategy,
+    QueryParameters,
+    VectorDataType,
+    VectorMetadataMapping,
+)
 from .chat_message_history import (
     BigtableChatMessageHistory,
     create_chat_history_table,
     init_chat_history_table,
 )
 from .engine import BigtableEngine
+from .execute_query_tools import (
+    BigtableExecuteQueryTool,
+    PresetBigtableExecuteQueryTool,
+)
 from .key_value_store import BigtableByteStore, init_key_value_store_table
 from .loader import (
     BigtableLoader,
@@ -28,16 +40,26 @@ from .loader import (
     MetadataMapping,
     init_document_table,
 )
+from .vector_store import BigtableVectorStore, init_vector_store_table
 from .version import __version__
 
 __all__ = [
+    "BigtableExecuteQueryTool",
+    "PresetBigtableExecuteQueryTool",
     "BigtableChatMessageHistory",
     "create_chat_history_table",
     "init_document_table",
     "init_chat_history_table",
     "init_key_value_store_table",
+    "init_vector_store_table",
     "BigtableByteStore",
     "AsyncBigtableByteStore",
+    "BigtableVectorStore",
+    "AsyncBigtableVectorStore",
+    "DistanceStrategy",
+    "VectorDataType",
+    "ColumnConfig",
+    "VectorMetadataMapping",
     "BigtableEngine",
     "BigtableLoader",
     "BigtableSaver",
