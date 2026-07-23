@@ -1,4 +1,4 @@
-langchain-core==0.3.72
+langchain-core==0.3.81
 google-cloud-bigtable==2.31.0
 deprecated==1.2.18
 typing-extensions>=4.12.0
